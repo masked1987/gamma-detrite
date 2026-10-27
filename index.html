@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gamma Detrite | Options gamma levels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#eef3f6;--surface:#ffffff;--ink:#14212c;--muted:#53697a;--line:#d3dde4;
+  --pos:#0f8ea6;--neg:#c23a63;--flip:#9a6a00;--sel:rgba(20,33,44,.09);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13202c;--surface:#1a2a38;--ink:#e8eff4;--muted:#9bb0bf;--line:#2b3e4e;
+    --pos:#4fc3d9;--neg:#ec6f93;--flip:#f0b84a;--sel:rgba(232,239,244,.11);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13202c;--surface:#1a2a38;--ink:#e8eff4;--muted:#9bb0bf;--line:#2b3e4e;
+  --pos:#4fc3d9;--neg:#ec6f93;--flip:#f0b84a;--sel:rgba(232,239,244,.11);
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Schibsted Grotesk","Segoe UI",system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:12px}
+.mark{font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+.badge{font-size:.8rem;color:var(--flip);border:1px solid var(--flip);border-radius:999px;padding:2px 10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{font:inherit;font-weight:600;min-height:44px;min-width:64px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+h1{font-size:clamp(1.7rem,7vw,2.3rem);line-height:1.1;letter-spacing:-.02em;font-weight:800;margin:12px 0 8px;max-width:16ch}
+.lede{margin:0 0 20px;color:var(--muted);max-width:44ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 12px 12px}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:0 4px 8px}
+h2{font-size:1.05rem;margin:0;font-weight:600}
+.unit{font-size:.82rem;color:var(--muted)}
+#chart svg,#skew svg{display:block;width:100%;height:auto;overflow:visible}
+.k{fill:var(--muted);font-size:10.5px}
+.pos{fill:var(--pos)}.neg{fill:var(--neg)}
+.cell{stroke:var(--surface);stroke-width:1;cursor:pointer;outline:none}
+.cell:focus-visible{stroke:var(--ink);stroke-width:2}
+.cv{font-size:8px;font-weight:600;text-anchor:middle;pointer-events:none}
+.cellsel{fill:none;stroke:var(--ink);stroke-width:2;pointer-events:none}
+.emp{fill:var(--line);fill-opacity:.25;stroke:var(--surface);stroke-width:1}
+.ramp{display:flex;align-items:center;gap:8px;padding:10px 4px 0;font-size:.82rem;color:var(--muted)}
+.rampbar{flex:1;height:10px;border-radius:5px;border:1px solid var(--line);background:linear-gradient(90deg,var(--neg),var(--surface),var(--pos))}
+.axis{stroke:var(--line);stroke-width:1}
+.spotbox{fill:none;stroke:var(--ink);stroke-width:1.5;pointer-events:none}
+.spot{stroke:var(--ink);stroke-width:1.5;pointer-events:none}
+.flip{stroke:var(--flip);stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--muted);padding:8px 4px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:16px;height:0;border-top:2px solid var(--ink)}
+.sw.f{border-top:2px dashed var(--flip)}
+.sw.p{height:10px;border:0;background:var(--pos);border-radius:2px;width:10px}
+.sw.n{height:10px;border:0;background:var(--neg);border-radius:2px;width:10px}
+#read{margin:10px 4px 0;min-height:3em;font-size:.95rem}
+section{margin-top:28px}
+dl{margin:10px 0 0}
+.stat{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 0;border-top:1px solid var(--line)}
+.stat dt{color:var(--muted);font-size:.95rem}
+.stat dd{margin:0;font-weight:800;font-size:1.35rem;text-align:right}
+.stat p{grid-column:1/-1;margin:0;color:var(--muted);font-size:.9rem;max-width:48ch}
+.ld{margin:0 0 16px}label.btn{display:inline-flex;align-items:center}.btn{font:inherit;font-weight:600;min-height:44px;padding:0 18px;border:1px solid var(--ink);background:transparent;color:var(--ink);border-radius:10px;cursor:pointer}
+.sub{margin:4px 0 8px;color:var(--muted);font-size:.9rem}
+.sv{fill:var(--ink);font-size:11px;font-weight:600}
+.line{fill:none;stroke:var(--pos);stroke-width:2.5;stroke-linejoin:round}
+.dot{fill:var(--surface);stroke:var(--pos);stroke-width:2.5}
+details{border-top:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:600;min-height:32px}
+details p{margin:8px 0 0;color:var(--muted);max-width:50ch}
+footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;max-width:56ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="mark">Gamma Detrite</span>
+  <span class="badge" id="badge">Sample data</span>
+  <div class="seg" role="group" aria-label="Choose asset">
+    <button type="button" data-a="BTC" aria-pressed="true">BTC</button>
+    <button type="button" data-a="ETH" aria-pressed="false">ETH</button>
+  </div>
+</header>
+<main>
+  <h1>Gamma levels for BTC and ETH options</h1>
+  <p class="lede">See which strikes and expiries could pull price in or push it away. The darker the cell, the stronger the gamma.</p>
+
+  <div class="ld"><button type="button" class="btn" id="rfbtn">Refresh now</button><p class="sub" id="ldmsg" role="status">Checking for the latest data...</p></div>
+
+  <section class="panel" style="margin-top:0" aria-labelledby="ct">
+    <div class="ph"><h2 id="ct">BTC gamma heat map</h2><span class="unit">Each number is US$ thousands per 1% move</span></div>
+    <div id="chart"></div>
+    <div class="ramp"><span>Negative</span><i class="rampbar"></i><span>Positive</span></div>
+    <div class="legend"><span><i class="sw"></i>Spot price</span><span><i class="sw f"></i>Gamma flip</span><span>Darker means stronger</span></div>
+    <p id="read" role="status">Tap a cell to see its gamma.</p>
+    <p class="sub" style="margin:8px 4px 0">Each number is the gamma for one strike (row) and one expiry date (column): roughly how many thousand US dollars of the coin dealers would need to buy or sell if price moved 1%. Blue means they would sell rallies and buy dips, which calms price. Pink means they would do the opposite, which speeds price up. Darker means a bigger number.</p>
+  </section>
+
+  <section aria-labelledby="kr">
+    <h2 id="kr">Key readings</h2>
+    <dl id="stats"></dl>
+  </section>
+
+  <section aria-labelledby="hw">
+    <h2 id="hw">How to read the heat map</h2>
+    <details><summary>Blue cells: positive gamma</summary>
+      <p>Where the estimate is positive, dealer hedging tends to buy dips and sell rallies. That usually calms price near those strikes.</p></details>
+    <details><summary>Pink cells: negative gamma</summary>
+      <p>Where the estimate is negative, hedging tends to follow price in the same direction. That can speed moves up.</p></details>
+    <details><summary>How reliable are these numbers?</summary>
+      <p>They rest on an assumption about which side of each trade dealers hold, so treat them as an estimate and not a fact.</p></details>
+  </section>
+</main>
+<footer>Gamma Detrite is independent and is not affiliated with Deribit. Figures are estimates built from public options data, or clearly labelled samples. Nothing here is financial advice.</footer>
+</div>
+
+<script>
+(function(){
+  /* LIVE: replace null with the JSON made by gamma_refresh.py to show real data */
+  var LIVE={"BTC":{"spot":81011.15,"asof":"2026-10-27 21:41 UTC","exps":["1d","2d","3d","4d","10d","17d","31d","59d","150d","241d"],"strikes":[75000.0,76000.0,77000.0,77500.0,78000.0,78500.0,79000.0,79500.0,80000.0,80500.0,81000.0,81500.0,82000.0,82500.0,83000.0,83500.0,84000.0,85000.0,86000.0,87000.0,88000.0],"m":[[-0.0014,-0.0514,-2.1827,-0.0461,-1.3869,0.0,-6.074,-0.9483,-0.0613,0.0],[-0.012,-0.0477,-3.041,-0.0703,-1.6016,-0.1467,-1.4807,-0.0723,-0.6646,-0.0008],[-0.0761,-0.0456,-3.5816,-0.271,-1.6928,-0.1561,-1.3364,0.0,0.0,0.0],[-0.0038,-0.3408,-0.2039,-0.0004,0.0,0.0,0.0,0.0,0.0,0.0],[-0.0303,-0.0283,-4.845,-0.0139,-1.1983,-0.1197,-2.3006,0.1536,-0.0159,-0.0025],[-0.1251,-0.0917,-0.1374,-0.0736,0.0,0.0,0.0,0.0,0.0,0.0],[-0.2231,-0.1054,-5.8372,-0.014,-0.8085,-0.133,-0.4735,0.0,0.0,0.0],[-1.6707,-0.9032,-0.7439,0.0128,0.0,0.0,0.0,0.0,0.0,0.0],[0.4982,-0.1498,-1.9933,0.0088,-1.3887,-0.4895,0.7578,10.0978,0.8978,-0.1193],[3.0117,0.642,1.177,0.0189,0.0,0.0,0.0,0.0,0.0,0.0],[8.2703,0.8027,-2.8549,5.0958,-0.1227,-0.2304,-0.842,0.0,0.0,0.0],[7.9737,0.1746,0.3466,0.1334,0.0,0.0,0.0,0.0,0.0,0.0],[4.1737,0.3201,10.2878,0.2043,1.0923,0.5023,0.2628,0.2796,1.5679,-0.0388],[1.3256,0.6431,5.4295,2.0233,0.0,0.0,0.0,0.0,0.0,0.0],[0.5348,0.2052,2.8631,0.4474,4.1128,0.0885,-0.1431,0.0,0.0,0.0],[0.1661,0.0477,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.6901,0.2095,6.0859,0.091,0.8233,0.2768,2.3316,2.2656,0.4919,0.1246],[0.0624,0.2264,8.5051,0.1058,1.6328,0.2791,3.5189,5.578,0.8512,0.1793],[0.0001,0.0518,2.2485,0.0318,1.0193,0.3483,1.5335,6.8866,0.8478,0.0407],[0.0001,0.002,1.2745,0.0005,0.3249,0.0,2.4465,0.0,0.0,0.0],[0.0,0.0005,1.0995,0.2217,1.3104,0.1004,4.8666,8.4708,1.1034,0.0282]],"pc":0.6},"ETH":{"spot":2352.25,"asof":"2026-10-27 21:41 UTC","exps":["1d","2d","3d","4d","10d","17d","31d","59d","150d","241d"],"strikes":[2180.0,2200.0,2220.0,2240.0,2250.0,2260.0,2280.0,2300.0,2320.0,2340.0,2350.0,2360.0,2380.0,2400.0,2420.0,2440.0,2450.0,2460.0,2480.0,2500.0,2520.0],"m":[[-0.0006,-0.0029,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[-0.0073,-0.0289,-0.5157,-0.0045,-0.1516,-0.0413,-0.2064,1.6539,0.0426,0.0161],[-0.0134,-0.0081,0.0,-0.002,0.0,0.0,0.0,0.0,0.0,0.0],[-0.0187,-0.0158,0.0,-0.0117,0.0,0.0,0.0,0.0,0.0,0.0],[-0.0002,0.0,-0.953,0.0,-0.2454,-0.0371,-0.0689,0.0,0.0,0.0],[-0.0277,-0.1268,0.0056,-0.004,0.0,0.0,0.0,0.0,0.0,0.0],[-0.0491,-0.0005,-0.0038,0.0031,0.0,0.0,0.0,0.0,0.0,0.0],[-0.1092,-0.0518,-4.6464,0.004,-0.1743,-0.0556,-0.1253,1.1649,0.0332,-0.0141],[-0.1302,0.0294,-0.0652,-0.0106,0.0,0.0,0.0,0.0,0.0,0.0],[0.6724,0.0469,0.1107,-0.012,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,-0.7236,0.0,-0.0697,-0.0139,-0.0596,0.0,0.0,0.0],[0.9118,0.0723,0.1118,0.0002,0.0,0.0,0.0,0.0,0.0,0.0],[0.8105,0.0598,0.0347,0.002,0.0,0.0,0.0,0.0,0.0,0.0],[0.2349,0.0472,-1.707,0.0123,-0.0352,0.0301,-0.0794,0.0036,0.3471,0.0109],[0.0142,0.056,0.0,0.0179,0.0,0.0,0.0,0.0,0.0,0.0],[0.0062,0.0158,0.0,0.0005,0.0,0.0,0.0,0.0,0.0,0.0],[0.0049,0.0186,0.0369,0.0,0.0823,0.1043,-0.062,0.0,0.0,0.0],[0.0003,0.0028,0.0,0.0005,0.0,0.0,0.0,0.0,0.0,0.0],[0.002,0.0004,0.0,0.0037,0.0,0.0,0.0,0.0,0.0,0.0],[0.0029,0.0179,0.9207,0.0007,0.3434,0.134,0.1467,1.2379,0.2312,-0.0018],[0.0027,0.0045,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],"pc":0.5}};
+  /* Sample only: gamma is really calculated per strike and expiry from illustrative open interest and volatility */
+  var DAYS=[1,2,3,4,10,17,31,59,150,241],SAMPLE_EXP=DAYS.map(function(x){return x+"d"});
+  var S={
+    BTC:{spot:90000,start:70000,step:2500,n:17,oi:900,pc:0.78},
+    ETH:{spot:2300,start:1900,step:50,n:17,oi:14000,pc:0.91}
+  };
+  function gam(F,K,sg,T){
+    var d1=(Math.log(F/K)+0.5*sg*sg*T)/(sg*Math.sqrt(T));
+    return Math.exp(-0.5*d1*d1)/Math.sqrt(2*Math.PI)/(F*sg*Math.sqrt(T));
+  }
+  function bump(x,c,w){var z=Math.log(x/c)/w;return Math.exp(-z*z)}
+  function sample(d){
+    var strikes=[],m=[],i,j;
+    for(i=0;i<d.n;i++)strikes.push(d.start+i*d.step);
+    for(i=0;i<d.n;i++){
+      var K=strikes[i],row=[];
+      for(j=0;j<DAYS.length;j++){
+        var T=DAYS[j]/365,sg=0.5+0.04*Math.sqrt(DAYS[j]/30),
+            amp=d.oi*(0.35+0.65*Math.exp(-DAYS[j]/40))*(1+(((i*7+j*13)%5)-2)*0.06),
+            call=amp*bump(K,d.spot*1.05,0.07),put=amp*0.9*bump(K,d.spot*0.93,0.08);
+        row.push((gam(d.spot,K,sg,T)*(call-put)*d.spot*d.spot*0.01)/1e6);
+      }
+      m.push(row);
+    }
+    return {spot:d.spot,pc:d.pc,exps:SAMPLE_EXP,live:false,strikes:strikes,m:m};
+  }
+  var D={};
+  function build(LV){
+    Object.keys(S).forEach(function(a){
+      var L=LV&&LV[a];
+      D[a]=L?{spot:L.spot,asof:L.asof,pc:L.pc,exps:L.exps,strikes:L.strikes,m:L.m,live:true}:sample(S[a]);
+      D[a].row=D[a].m.map(function(r){return r.reduce(function(x,y){return x+y},0)});
+    });
+  }
+  function valid(LV){
+    try{return ["BTC","ETH"].every(function(a){
+      var L=LV[a];
+      return L&&isFinite(L.spot)&&L.exps.length>0&&L.strikes.length===L.m.length&&L.m.every(function(r){return r.length===L.exps.length&&r.every(isFinite)});
+    })}catch(e){return false}
+  }
+  build(LIVE);
+  var asset="BTC",sel=null;
+  function $(id){return document.getElementById(id)}
+  function f(n){return n.toLocaleString("en-US")}
+  function sg(v){return (v>0?"+":v<0?"\u2212":"")+f(Math.round(Math.abs(v)*1000))+"K"}
+  function cl(v){return (v<0?"\u2212":"")+Math.round(Math.abs(v)*1000)}
+  function idxOf(d,p){
+    var k=d.strikes,n=k.length;
+    if(p<=k[0])return 0;if(p>=k[n-1])return n-1;
+    for(var i=0;i<n-1;i++)if(p>=k[i]&&p<=k[i+1])return i+(p-k[i])/(k[i+1]-k[i]);
+    return 0;
+  }
+  function flipOf(d){
+    var best=null,bd=1e15,g=d.row,k=d.strikes;
+    for(var i=0;i<g.length-1;i++){
+      if((g[i]<0&&g[i+1]>=0)||(g[i]>=0&&g[i+1]<0)){
+        var fr=Math.abs(g[i])/(Math.abs(g[i])+Math.abs(g[i+1]));
+        var x=Math.round(k[i]+fr*(k[i+1]-k[i]));
+        if(Math.abs(x-d.spot)<bd){bd=Math.abs(x-d.spot);best=x}
+      }
+    }
+    return best;
+  }
+  function draw(){
+    var d=D[asset],m=d.m,n=m.length,c=d.exps.length,rh=20,top=26,lx=50,cw=Math.floor(304/c),H=top+n*rh+6;
+    var max=0;m.forEach(function(r){r.forEach(function(v){max=Math.max(max,Math.abs(v))})});
+    if(!max)max=1;
+    var h='<svg viewBox="0 0 360 '+H+'" role="group" aria-label="Gamma heat map by strike and expiry">';
+    d.exps.forEach(function(e,j){h+='<text class="k" x="'+(lx+j*cw+cw/2)+'" y="16" text-anchor="middle">'+e+'</text>'});
+    for(var i=n-1;i>=0;i--){
+      var y=top+(n-1-i)*rh;
+      h+='<text class="k" x="'+(lx-6)+'" y="'+(y+14)+'" text-anchor="end">'+f(d.strikes[i])+'</text>';
+      for(var j=0;j<c;j++){
+        var v=m[i][j],x=lx+j*cw;
+        if(Math.abs(v)<0.005){h+='<rect class="emp" x="'+x+'" y="'+y+'" width="'+cw+'" height="'+rh+'"/>';continue}
+        var o=(0.1+0.9*Math.pow(Math.abs(v)/max,0.7)).toFixed(2);
+        h+='<rect class="cell '+(v<0?'neg':'pos')+'" style="fill-opacity:'+o+'" x="'+x+'" y="'+y+'" width="'+cw+'" height="'+rh+'" data-i="'+i+'" data-j="'+j+'" tabindex="0" role="button" aria-label="Strike '+f(d.strikes[i])+', expiry '+d.exps[j]+', gamma '+sg(v)+'"/>';
+        h+='<text class="cv" style="fill:'+(o>0.5?'var(--bg)':'var(--ink)')+'" x="'+(x+cw/2)+'" y="'+(y+13.5)+'">'+cl(v)+'</text>';
+      }
+    }
+    function yAt(p){return top+(n-1-idxOf(d,p))*rh+rh/2}
+    var fl=flipOf(d),xe=lx+c*cw;
+    h+='<rect class="spotbox" x="'+lx+'" y="'+(yAt(d.spot)-rh/2)+'" width="'+(c*cw)+'" height="'+rh+'"/>';
+    if(fl!==null)h+='<line class="flip" x1="'+(lx-4)+'" x2="'+xe+'" y1="'+yAt(fl)+'" y2="'+yAt(fl)+'"/>';
+    if(sel){h+='<rect class="cellsel" x="'+(lx+sel[1]*cw)+'" y="'+(top+(n-1-sel[0])*rh)+'" width="'+cw+'" height="'+rh+'"/>'}
+    $("chart").innerHTML=h+'</svg>';
+    $("ct").textContent=asset+" gamma heat map";
+    $("badge").textContent=d.live?"Live snapshot "+d.asof:"Sample data";
+    var tot=d.row.reduce(function(a,b){return a+b},0),ps=0,ns=0,bp=0,bn=0;
+    d.row.forEach(function(v,i){if(v>d.row[bp])bp=i;if(v<d.row[bn])bn=i});
+    m.forEach(function(r){r.forEach(function(v){if(v>0)ps+=v;else ns+=v})});
+    var st=[
+      ["Net gamma",sg(tot),tot>=0?"Net positive: dealer hedging tends to calm price swings.":"Net negative: dealer hedging tends to amplify price swings."],
+      ["Positive gamma total",sg(ps),"Added up across every strike and expiry in blue."],
+      ["Negative gamma total",sg(ns),"Added up across every strike and expiry in pink."],
+      ["Strongest positive strike",f(d.strikes[bp]),"Darkest blue row once all expiries are combined."],
+      ["Strongest negative strike",f(d.strikes[bn]),"Darkest pink row once all expiries are combined."],
+      ["Gamma flip",fl===null?"None":f(fl),fl===null?"No sign change in these strikes.":"Nearest strike area where gamma changes sign. Spot is "+(d.spot>fl?"above":"below")+" it."],
+      ["Put/call ratio",d.pc==null?"n/a":d.pc.toFixed(2),d.pc==null?"":(d.pc<1?"More call than put open interest.":"More put than call open interest.")]
+    ];
+    $("stats").innerHTML=st.map(function(s){return '<div class="stat"><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd><p>'+s[2]+'</p></div>'}).join("");
+  }
+  function pick(i,j){
+    var d=D[asset],v=d.m[i][j];sel=[i,j];
+    $("read").textContent="Strike "+f(d.strikes[i])+", "+d.exps[j]+" expiry: US$ "+sg(v)+" per 1% move. "+(v>=0?"Positive gamma. Hedging here tends to calm price.":"Negative gamma. Hedging here can speed price up.");
+    draw();
+    var r=document.querySelector('.cell[data-i="'+i+'"][data-j="'+j+'"]');if(r)r.focus();
+  }
+  function hit(e){var r=e.target.closest(".cell");if(r){pick(+r.getAttribute("data-i"),+r.getAttribute("data-j"));return true}}
+  $("chart").addEventListener("click",hit);
+  $("chart").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){if(hit(e))e.preventDefault()}});
+  Array.prototype.forEach.call(document.querySelectorAll(".seg button"),function(b){
+    b.addEventListener("click",function(){
+      asset=b.getAttribute("data-a");sel=null;
+      Array.prototype.forEach.call(document.querySelectorAll(".seg button"),function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+      $("read").textContent="Tap a cell to see its gamma.";
+      draw();
+    });
+  });
+  var URLS=["https://raw.githubusercontent.com/masked1987/gamma-detrite/main/gamma-data.json","gamma-data.json"];
+  function tryUrl(i){
+    if(i>=URLS.length)return Promise.reject(0);
+    return fetch(URLS[i]+(URLS[i].indexOf("?")<0?"?t="+Date.now():""),{cache:"no-store"})
+      .then(function(r){if(!r.ok)throw 0;return r.json()})
+      .then(function(LV){if(!valid(LV))throw 0;return LV})
+      .catch(function(){return tryUrl(i+1)});
+  }
+  function fetchLive(){
+    $("ldmsg").textContent="Checking for the latest data...";
+    tryUrl(0).then(function(LV){
+      if(LV.BTC.asof!==D.BTC.asof||LV.ETH.asof!==D.ETH.asof){build(LV);sel=null;$("read").textContent="Tap a cell to see its gamma.";draw()}
+      $("ldmsg").textContent="Up to date. The data refreshes about every 15 minutes.";
+    }).catch(function(){$("ldmsg").textContent="Could not load the latest data. Showing the last saved snapshot."});
+  }
+  $("rfbtn").addEventListener("click",fetchLive);
+  draw();
+  fetchLive();
+  setInterval(fetchLive,300000);
+})();
+</script>
+</body>
+</html>
