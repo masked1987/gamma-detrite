@@ -38,6 +38,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{font:inherit;font-weight:600;min-height:44px;min-width:64px;border:0;background:transparent;color:var(--muted);cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.rng{margin:0 4px 10px}.rng button{min-height:36px;font-size:.9rem;padding:0 12px}
 button:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 h1{font-size:clamp(1.7rem,7vw,2.3rem);line-height:1.1;letter-spacing:-.02em;font-weight:800;margin:12px 0 8px;max-width:16ch}
 .lede{margin:0 0 20px;color:var(--muted);max-width:44ch}
@@ -100,6 +101,10 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
 
   <section class="panel" style="margin-top:0" aria-labelledby="ct">
     <div class="ph"><h2 id="ct">ETH gamma heat map</h2><span class="unit">Each number is US$ thousands per 1% move</span></div>
+    <div class="seg rng" role="group" aria-label="Strike range">
+      <button type="button" data-r="near" aria-pressed="true">Near</button>
+      <button type="button" data-r="wide" aria-pressed="false">Wide &plusmn;25%</button>
+    </div>
     <div id="chart"></div>
     <div class="ramp"><span>Negative</span><i class="rampbar"></i><span>Positive</span></div>
     <div class="legend"><span><i class="sw"></i>Spot price</span><span><i class="sw f"></i>Gamma flip</span><span>Darker means stronger</span></div>
@@ -174,7 +179,14 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
   var MON="JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split(" "),NAME=/^[A-Z]+-(\d{1,2})([A-Z]{3})(\d{2})-([\d.d]+)-([CP])$/;
   function pad(n){return (n<10?"0":"")+n}
   function stamp(t){var d=new Date(t);return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate())+" "+pad(d.getUTCHours())+":"+pad(d.getUTCMinutes())+" UTC"}
-  function compute(rows,spot,now){
+  var WIDE_PCT=25,WIDE_ROWS=22;
+  /* Step closest to the target size among 1, 2, 2.5, 5 x 10^n (ETH about 50, BTC about 2,000) */
+  function niceStep(x){
+    var p=Math.pow(10,Math.floor(Math.log10(x))),best=p;
+    [1,2,2.5,5,10].forEach(function(m){if(Math.abs(Math.log(m*p/x))<Math.abs(Math.log(best/x)))best=m*p});
+    return best;
+  }
+  function compute(rows,spot,now,wide){
     var cell={},eset={},po=0,co=0;
     rows.forEach(function(s){
       var p=NAME.exec(s.instrument_name||""),mo=p?MON.indexOf(p[2]):-1;
@@ -188,7 +200,19 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     });
     var exps=Object.keys(eset).map(Number).sort(function(a,b){return a-b}).slice(0,10),kset={};
     Object.keys(cell).forEach(function(key){var q=key.split("|");if(exps.indexOf(+q[1])>=0)kset[q[0]]=1});
-    var ks=Object.keys(kset).map(Number).sort(function(a,b){return Math.abs(a-spot)-Math.abs(b-spot)}).slice(0,21).sort(function(a,b){return a-b});
+    var ks;
+    if(wide){
+      /* Strikes within +-WIDE_PCT grouped into round price rows; every row is kept so the axis is evenly spaced */
+      var step=niceStep(spot*2*WIDE_PCT/100/WIDE_ROWS),lo=Math.ceil(spot*(1-WIDE_PCT/100)/step),hi=Math.floor(spot*(1+WIDE_PCT/100)/step),wc={};
+      Object.keys(cell).forEach(function(key){
+        var q=key.split("|"),b=Math.round(+q[0]/step);
+        if(b>=lo&&b<=hi)wc[b*step+"|"+q[1]]=(wc[b*step+"|"+q[1]]||0)+cell[key];
+      });
+      cell=wc;ks=[];
+      for(var b=lo;b<=hi;b++)ks.push(b*step);
+    }else{
+      ks=Object.keys(kset).map(Number).sort(function(a,b){return Math.abs(a-spot)-Math.abs(b-spot)}).slice(0,21).sort(function(a,b){return a-b});
+    }
     var today=Math.floor(now/864e5);
     return {spot:Math.round(spot*100)/100,asof:stamp(now),pc:co?Math.round(po/co*100)/100:null,strikes:ks,
       exps:exps.map(function(e){return (Math.floor(e/864e5)-today)+"d"}),
@@ -202,8 +226,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     var now=Date.now();
     return Promise.all(["BTC","ETH"].map(function(a){
       return Promise.all([deribit("get_index_price?index_name="+a.toLowerCase()+"_usd"),deribit("get_book_summary_by_currency?currency="+a+"&kind=option")])
-        .then(function(r){return compute(r[1],r[0].index_price,now)});
-    })).then(function(r){var LV={BTC:r[0],ETH:r[1]};if(!valid(LV))throw 0;return LV});
+        .then(function(r){return {near:compute(r[1],r[0].index_price,now),wide:compute(r[1],r[0].index_price,now,true)}});
+    })).then(function(r){
+      var out={near:{BTC:r[0].near,ETH:r[1].near},wide:{BTC:r[0].wide,ETH:r[1].wide}};
+      if(!valid(out.near)||!valid(out.wide))throw 0;return out;
+    });
   }
   function ago(asof){
     var m=Math.round((Date.now()-Date.parse(asof.replace(" UTC","Z").replace(" ","T")))/6e4);
@@ -213,7 +240,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     if(m<48*60)return Math.floor(m/60)+" h "+pad(m%60)+" min old";
     return Math.round(m/1440)+" days old";
   }
-  build(LIVE,"saved");
+  var NEAR={LV:LIVE,src:"saved"},WIDE=null,range="near";
+  try{if(localStorage.getItem("gd.range")==="wide")range="wide"}catch(e){}
+  function cur(){return range==="wide"&&WIDE?WIDE:NEAR}
+  function apply(){var x=cur();build(x.LV,x.src)}
+  apply();
   var asset="ETH",sel=null;
   function $(id){return document.getElementById(id)}
   function f(n){return n.toLocaleString("en-US")}
@@ -262,6 +293,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     if(sel){h+='<rect class="cellsel" x="'+(lx+sel[1]*cw)+'" y="'+(top+(n-1-sel[0])*rh)+'" width="'+cw+'" height="'+rh+'"/>'}
     $("chart").innerHTML=h+'</svg>';
     $("ct").textContent=asset+" gamma heat map";
+    var on=cur()===WIDE?"wide":"near";
+    Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(x){x.setAttribute("aria-pressed",x.getAttribute("data-r")===on?"true":"false")});
     $("badge").textContent=!d.live?"Sample data":d.src==="deribit"?"Live "+d.asof:"Snapshot "+d.asof+" \u00b7 "+ago(d.asof);
     var tot=d.row.reduce(function(a,b){return a+b},0),ps=0,ns=0,bp=0,bn=0;
     d.row.forEach(function(v,i){if(v>d.row[bp])bp=i;if(v<d.row[bn])bn=i});
@@ -284,15 +317,23 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
   }
   function readout(i,j){
     var d=D[asset],v=d.m[i][j];
-    $("read").textContent="Strike "+f(d.strikes[i])+", "+d.exps[j]+" expiry: US$ "+sg(v)+" per 1% move. "+(v>=0?"Positive gamma. Hedging here tends to calm price.":"Negative gamma. Hedging here can speed price up.");
+    $("read").textContent=(cur()===WIDE?"Strikes near ":"Strike ")+f(d.strikes[i])+", "+d.exps[j]+" expiry: US$ "+sg(v)+" per 1% move. "+(v>=0?"Positive gamma. Hedging here tends to calm price.":"Negative gamma. Hedging here can speed price up.");
   }
   function hit(e){var r=e.target.closest(".cell");if(r){pick(+r.getAttribute("data-i"),+r.getAttribute("data-j"));return true}}
   $("chart").addEventListener("click",hit);
   $("chart").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){if(hit(e))e.preventDefault()}});
-  Array.prototype.forEach.call(document.querySelectorAll(".seg button"),function(b){
+  Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(b){
+    b.addEventListener("click",function(){
+      var r=b.getAttribute("data-r");
+      if(r==="wide"&&!WIDE){$("read").textContent="The wide view needs live data from Deribit. Tap Refresh now to try again.";return}
+      range=r;try{localStorage.setItem("gd.range",r)}catch(e){}
+      sel=null;apply();$("read").textContent="Tap a cell to see its gamma.";draw();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-a]"),function(b){
     b.addEventListener("click",function(){
       asset=b.getAttribute("data-a");sel=null;
-      Array.prototype.forEach.call(document.querySelectorAll(".seg button"),function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+      Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-a]"),function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
       $("read").textContent="Tap a cell to see its gamma.";
       draw();
     });
@@ -306,21 +347,24 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
       .catch(function(){return tryUrl(i+1)});
   }
   /* Keeps the selected cell only if it still points at the same strike and expiry */
-  function show(LV,src){
-    var old=D[asset],keep=sel&&LV[asset].strikes.join()===old.strikes.join()&&LV[asset].exps.join()===old.exps.join();
-    build(LV,src);
+  function show(near,wide,src){
+    var old=D[asset];
+    NEAR={LV:near,src:src};
+    if(wide)WIDE={LV:wide,src:src};else if(near.BTC.asof>(WIDE?WIDE.LV.BTC.asof:""))WIDE=null;
+    var nw=cur().LV[asset],keep=sel&&nw.strikes.join()===old.strikes.join()&&nw.exps.join()===old.exps.join();
+    apply();
     if(keep)readout(sel[0],sel[1]);
     else{sel=null;$("read").textContent="Tap a cell to see its gamma."}
     draw();
   }
   function fetchLive(){
     $("ldmsg").textContent="Loading live data from Deribit...";
-    fromDeribit().then(function(LV){
-      show(LV,"deribit");
-      $("ldmsg").textContent="Live from Deribit as of "+LV.BTC.asof.slice(11)+". Updates every 5 minutes while this page is open.";
+    fromDeribit().then(function(r){
+      show(r.near,r.wide,"deribit");
+      $("ldmsg").textContent="Live from Deribit as of "+r.near.BTC.asof.slice(11)+". Updates every 5 minutes while this page is open.";
     }).catch(function(){
       return tryUrl(0).then(function(LV){
-        if(LV.BTC.asof>D.BTC.asof)show(LV,"saved");else draw();
+        if(LV.BTC.asof>NEAR.LV.BTC.asof)show(LV,null,"saved");else draw();
         $("ldmsg").textContent="Deribit did not respond, so this is data from "+D.BTC.asof+" ("+ago(D.BTC.asof)+"). Tap Refresh now to try again.";
       });
     }).catch(function(){
