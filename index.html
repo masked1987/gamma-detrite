@@ -56,9 +56,8 @@ h2{font-size:1.05rem;margin:0;font-weight:600}
 .ramp{display:flex;align-items:center;gap:8px;padding:10px 4px 0;font-size:.82rem;color:var(--muted)}
 .rampbar{flex:1;height:10px;border-radius:5px;border:1px solid var(--line);background:linear-gradient(90deg,var(--neg),var(--surface),var(--pos))}
 .axis{stroke:var(--line);stroke-width:1}
-.spotbox{fill:none;stroke:var(--ink);stroke-width:1.5;pointer-events:none}
-.spot{stroke:var(--ink);stroke-width:1.5;pointer-events:none}
-.flip{stroke:var(--flip);stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}
+.spot{stroke:var(--ink);stroke-width:2;pointer-events:none}
+.flip{stroke:var(--flip);stroke-width:2;stroke-dasharray:5 4;pointer-events:none}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--muted);padding:8px 4px 0}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .sw{width:16px;height:0;border-top:2px solid var(--ink)}
@@ -220,11 +219,12 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
   function f(n){return n.toLocaleString("en-US")}
   function sg(v){return (v>0?"+":v<0?"\u2212":"")+f(Math.round(Math.abs(v)*1000))+"K"}
   function cl(v){return (v<0?"\u2212":"")+Math.round(Math.abs(v)*1000)}
-  function idxOf(d,p){
+  /* Row below the gap that price p falls into (-1 below the first strike), so markers sit between rows and never cover numbers */
+  function gapOf(d,p){
     var k=d.strikes,n=k.length;
-    if(p<=k[0])return 0;if(p>=k[n-1])return n-1;
-    for(var i=0;i<n-1;i++)if(p>=k[i]&&p<=k[i+1])return i+(p-k[i])/(k[i+1]-k[i]);
-    return 0;
+    if(p<k[0])return -1;
+    for(var i=0;i<n-1;i++)if(p<k[i+1])return i;
+    return n-1;
   }
   function flipOf(d){
     var best=null,bd=1e15,g=d.row,k=d.strikes;
@@ -251,12 +251,13 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
         if(Math.abs(v)<0.005){h+='<rect class="emp" x="'+x+'" y="'+y+'" width="'+cw+'" height="'+rh+'"/>';continue}
         var o=(0.1+0.9*Math.pow(Math.abs(v)/max,0.7)).toFixed(2);
         h+='<rect class="cell '+(v<0?'neg':'pos')+'" style="fill-opacity:'+o+'" x="'+x+'" y="'+y+'" width="'+cw+'" height="'+rh+'" data-i="'+i+'" data-j="'+j+'" tabindex="0" role="button" aria-label="Strike '+f(d.strikes[i])+', expiry '+d.exps[j]+', gamma '+sg(v)+'"/>';
-        h+='<text class="cv" style="fill:'+(o>0.5?'var(--bg)':'var(--ink)')+'" x="'+(x+cw/2)+'" y="'+(y+13.5)+'">'+cl(v)+'</text>';
+        var lb=cl(v);
+        h+='<text class="cv" style="fill:'+(o>0.5?'var(--bg)':'var(--ink)')+(lb.length>5?';font-size:6.5px':'')+'" x="'+(x+cw/2)+'" y="'+(y+13.5)+'">'+lb+'</text>';
       }
     }
-    function yAt(p){return top+(n-1-idxOf(d,p))*rh+rh/2}
+    function yAt(p){return top+(n-1-gapOf(d,p))*rh}
     var fl=flipOf(d),xe=lx+c*cw;
-    h+='<rect class="spotbox" x="'+lx+'" y="'+(yAt(d.spot)-rh/2)+'" width="'+(c*cw)+'" height="'+rh+'"/>';
+    h+='<line class="spot" x1="'+(lx-4)+'" x2="'+xe+'" y1="'+yAt(d.spot)+'" y2="'+yAt(d.spot)+'"/>';
     if(fl!==null)h+='<line class="flip" x1="'+(lx-4)+'" x2="'+xe+'" y1="'+yAt(fl)+'" y2="'+yAt(fl)+'"/>';
     if(sel){h+='<rect class="cellsel" x="'+(lx+sel[1]*cw)+'" y="'+(top+(n-1-sel[0])*rh)+'" width="'+cw+'" height="'+rh+'"/>'}
     $("chart").innerHTML=h+'</svg>';
