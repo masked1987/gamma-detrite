@@ -157,10 +157,11 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     return {spot:d.spot,pc:d.pc,exps:SAMPLE_EXP,live:false,strikes:strikes,m:m};
   }
   var D={};
-  function build(LV){
+  /* src: "deribit" (computed in this browser just now) or "saved" (snapshot written by gamma_refresh.py) */
+  function build(LV,src){
     Object.keys(S).forEach(function(a){
       var L=LV&&LV[a];
-      D[a]=L?{spot:L.spot,asof:L.asof,pc:L.pc,exps:L.exps,strikes:L.strikes,m:L.m,live:true}:sample(S[a]);
+      D[a]=L?{spot:L.spot,asof:L.asof,pc:L.pc,exps:L.exps,strikes:L.strikes,m:L.m,live:true,src:src}:sample(S[a]);
       D[a].row=D[a].m.map(function(r){return r.reduce(function(x,y){return x+y},0)});
     });
   }
@@ -170,7 +171,50 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
       return L&&isFinite(L.spot)&&L.exps.length>0&&L.strikes.length===L.m.length&&L.m.every(function(r){return r.length===L.exps.length&&r.every(isFinite)});
     })}catch(e){return false}
   }
-  build(LIVE);
+  /* Same calculation as gamma_refresh.py, run in the browser so the map is current on every visit */
+  var MON="JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split(" "),NAME=/^[A-Z]+-(\d{1,2})([A-Z]{3})(\d{2})-([\d.d]+)-([CP])$/;
+  function pad(n){return (n<10?"0":"")+n}
+  function stamp(t){var d=new Date(t);return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate())+" "+pad(d.getUTCHours())+":"+pad(d.getUTCMinutes())+" UTC"}
+  function compute(rows,spot,now){
+    var cell={},eset={},po=0,co=0;
+    rows.forEach(function(s){
+      var p=NAME.exec(s.instrument_name||""),mo=p?MON.indexOf(p[2]):-1;
+      if(mo<0)return;
+      var e=Date.UTC(2000+ +p[3],mo,+p[1],8),K=parseFloat(p[4].replace("d",".")),
+          oi=s.open_interest||0,iv=(s.mark_iv||0)/100,F=s.underlying_price||spot,T=(e-now)/(365*864e5);
+      if(oi<=0||iv<=0||T<=0)return;
+      var g=gam(F,K,iv,T)*oi*spot*spot*0.01;
+      if(p[5]==="C")co+=oi;else{po+=oi;g=-g}
+      cell[K+"|"+e]=(cell[K+"|"+e]||0)+g;eset[e]=1;
+    });
+    var exps=Object.keys(eset).map(Number).sort(function(a,b){return a-b}).slice(0,10),kset={};
+    Object.keys(cell).forEach(function(key){var q=key.split("|");if(exps.indexOf(+q[1])>=0)kset[q[0]]=1});
+    var ks=Object.keys(kset).map(Number).sort(function(a,b){return Math.abs(a-spot)-Math.abs(b-spot)}).slice(0,21).sort(function(a,b){return a-b});
+    var today=Math.floor(now/864e5);
+    return {spot:Math.round(spot*100)/100,asof:stamp(now),pc:co?Math.round(po/co*100)/100:null,strikes:ks,
+      exps:exps.map(function(e){return (Math.floor(e/864e5)-today)+"d"}),
+      m:ks.map(function(k){return exps.map(function(e){return Math.round((cell[k+"|"+e]||0)/100)/1e4})})};
+  }
+  function deribit(path){
+    return fetch("https://www.deribit.com/api/v2/public/"+path,{cache:"no-store"})
+      .then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){return j.result});
+  }
+  function fromDeribit(){
+    var now=Date.now();
+    return Promise.all(["BTC","ETH"].map(function(a){
+      return Promise.all([deribit("get_index_price?index_name="+a.toLowerCase()+"_usd"),deribit("get_book_summary_by_currency?currency="+a+"&kind=option")])
+        .then(function(r){return compute(r[1],r[0].index_price,now)});
+    })).then(function(r){var LV={BTC:r[0],ETH:r[1]};if(!valid(LV))throw 0;return LV});
+  }
+  function ago(asof){
+    var m=Math.round((Date.now()-Date.parse(asof.replace(" UTC","Z").replace(" ","T")))/6e4);
+    if(!isFinite(m))return "";
+    if(m<2)return "just now";
+    if(m<60)return m+" min old";
+    if(m<48*60)return Math.floor(m/60)+" h "+pad(m%60)+" min old";
+    return Math.round(m/1440)+" days old";
+  }
+  build(LIVE,"saved");
   var asset="BTC",sel=null;
   function $(id){return document.getElementById(id)}
   function f(n){return n.toLocaleString("en-US")}
@@ -217,7 +261,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     if(sel){h+='<rect class="cellsel" x="'+(lx+sel[1]*cw)+'" y="'+(top+(n-1-sel[0])*rh)+'" width="'+cw+'" height="'+rh+'"/>'}
     $("chart").innerHTML=h+'</svg>';
     $("ct").textContent=asset+" gamma heat map";
-    $("badge").textContent=d.live?"Live snapshot "+d.asof:"Sample data";
+    $("badge").textContent=!d.live?"Sample data":d.src==="deribit"?"Live "+d.asof:"Snapshot "+d.asof+" \u00b7 "+ago(d.asof);
     var tot=d.row.reduce(function(a,b){return a+b},0),ps=0,ns=0,bp=0,bn=0;
     d.row.forEach(function(v,i){if(v>d.row[bp])bp=i;if(v<d.row[bn])bn=i});
     m.forEach(function(r){r.forEach(function(v){if(v>0)ps+=v;else ns+=v})});
@@ -233,10 +277,13 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     $("stats").innerHTML=st.map(function(s){return '<div class="stat"><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd><p>'+s[2]+'</p></div>'}).join("");
   }
   function pick(i,j){
-    var d=D[asset],v=d.m[i][j];sel=[i,j];
-    $("read").textContent="Strike "+f(d.strikes[i])+", "+d.exps[j]+" expiry: US$ "+sg(v)+" per 1% move. "+(v>=0?"Positive gamma. Hedging here tends to calm price.":"Negative gamma. Hedging here can speed price up.");
+    sel=[i,j];readout(i,j);
     draw();
     var r=document.querySelector('.cell[data-i="'+i+'"][data-j="'+j+'"]');if(r)r.focus();
+  }
+  function readout(i,j){
+    var d=D[asset],v=d.m[i][j];
+    $("read").textContent="Strike "+f(d.strikes[i])+", "+d.exps[j]+" expiry: US$ "+sg(v)+" per 1% move. "+(v>=0?"Positive gamma. Hedging here tends to calm price.":"Negative gamma. Hedging here can speed price up.");
   }
   function hit(e){var r=e.target.closest(".cell");if(r){pick(+r.getAttribute("data-i"),+r.getAttribute("data-j"));return true}}
   $("chart").addEventListener("click",hit);
@@ -257,12 +304,28 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
       .then(function(LV){if(!valid(LV))throw 0;return LV})
       .catch(function(){return tryUrl(i+1)});
   }
+  /* Keeps the selected cell only if it still points at the same strike and expiry */
+  function show(LV,src){
+    var old=D[asset],keep=sel&&LV[asset].strikes.join()===old.strikes.join()&&LV[asset].exps.join()===old.exps.join();
+    build(LV,src);
+    if(keep)readout(sel[0],sel[1]);
+    else{sel=null;$("read").textContent="Tap a cell to see its gamma."}
+    draw();
+  }
   function fetchLive(){
-    $("ldmsg").textContent="Checking for the latest data...";
-    tryUrl(0).then(function(LV){
-      if(LV.BTC.asof!==D.BTC.asof||LV.ETH.asof!==D.ETH.asof){build(LV);sel=null;$("read").textContent="Tap a cell to see its gamma.";draw()}
-      $("ldmsg").textContent="Up to date. The data refreshes about every 15 minutes.";
-    }).catch(function(){$("ldmsg").textContent="Could not load the latest data. Showing the last saved snapshot."});
+    $("ldmsg").textContent="Loading live data from Deribit...";
+    fromDeribit().then(function(LV){
+      show(LV,"deribit");
+      $("ldmsg").textContent="Live from Deribit as of "+LV.BTC.asof.slice(11)+". Updates every 5 minutes while this page is open.";
+    }).catch(function(){
+      return tryUrl(0).then(function(LV){
+        if(LV.BTC.asof>D.BTC.asof)show(LV,"saved");else draw();
+        $("ldmsg").textContent="Deribit did not respond, so this is data from "+D.BTC.asof+" ("+ago(D.BTC.asof)+"). Tap Refresh now to try again.";
+      });
+    }).catch(function(){
+      draw();
+      $("ldmsg").textContent="Could not load any data just now. Showing the snapshot from "+D.BTC.asof+" ("+ago(D.BTC.asof)+").";
+    });
   }
   $("rfbtn").addEventListener("click",fetchLive);
   draw();
