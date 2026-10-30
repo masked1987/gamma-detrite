@@ -88,8 +88,8 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
   <span class="mark">Gamma Detrite</span>
   <span class="badge" id="badge">Sample data</span>
   <div class="seg" role="group" aria-label="Choose asset">
-    <button type="button" data-a="BTC" aria-pressed="true">BTC</button>
-    <button type="button" data-a="ETH" aria-pressed="false">ETH</button>
+    <button type="button" data-a="ETH" aria-pressed="true">ETH</button>
+    <button type="button" data-a="BTC" aria-pressed="false">BTC</button>
   </div>
 </header>
 <main>
@@ -99,7 +99,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
   <div class="ld"><button type="button" class="btn" id="rfbtn">Refresh now</button><p class="sub" id="ldmsg" role="status">Checking for the latest data...</p></div>
 
   <section class="panel" style="margin-top:0" aria-labelledby="ct">
-    <div class="ph"><h2 id="ct">BTC gamma heat map</h2><span class="unit">Each number is US$ thousands per 1% move</span></div>
+    <div class="ph"><h2 id="ct">ETH gamma heat map</h2><span class="unit">Each number is US$ thousands per 1% move</span></div>
     <div id="chart"></div>
     <div class="ramp"><span>Negative</span><i class="rampbar"></i><span>Positive</span></div>
     <div class="legend"><span><i class="sw"></i>Spot price</span><span><i class="sw f"></i>Gamma flip</span><span>Darker means stronger</span></div>
@@ -214,7 +214,7 @@ footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);color:v
     return Math.round(m/1440)+" days old";
   }
   build(LIVE,"saved");
-  var asset="BTC",sel=null;
+  var asset="ETH",sel=null;
   function $(id){return document.getElementById(id)}
   function f(n){return n.toLocaleString("en-US")}
   function sg(v){return (v>0?"+":v<0?"\u2212":"")+f(Math.round(Math.abs(v)*1000))+"K"}
