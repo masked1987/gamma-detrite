@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gamma Detrite | Options gamma levels</title>
+<script>
+/* Colour style chosen on the Fragility site (same site address, so same storage). */
+(function(){function lk(){try{var v=localStorage.getItem("look");if(v==="fire"||v==="moon")document.documentElement.setAttribute("data-look",v);else document.documentElement.removeAttribute("data-look")}catch(e){}}
+lk();window.addEventListener("storage",function(e){if(e.key==="look"||e.key===null)lk()})})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Geist:wght@400..800&display=swap" rel="stylesheet">
@@ -115,6 +120,21 @@ h1{letter-spacing:-.03em}
 h1{font-size:clamp(1.45rem,6.2vw,2rem);line-height:1.12;letter-spacing:0}
 h2{font-size:.98rem;line-height:1.3}
 .stat dd{font-size:1.2rem}
+/* Colour styles picked on the Fragility site: Fire and Blue moonlight (default teal). */
+:root[data-look="fire"]{--bg:#fbf5f1;--surface:#ffffff;--top:#fffaf6;--ink:#25140d;--muted:#7a6358;--line:#f0e0d6;
+  --accent:#c2410c;--lime:#be123c;--grad:linear-gradient(110deg,#d97706 0%,#ea580c 45%,#be123c 100%);
+  --halo:rgba(234,88,12,.11);--halo2:rgba(190,18,60,.06);--shadow:rgba(60,25,10,.12)}
+:root[data-look="moon"]{--bg:#f2f4fb;--surface:#ffffff;--top:#f7f8ff;--ink:#10162b;--muted:#5b6584;--line:#dde2f2;
+  --accent:#3451d1;--lime:#1e2f99;--grad:linear-gradient(110deg,#1e2f99 0%,#3451d1 50%,#6f8dff 100%);
+  --halo:rgba(52,81,209,.11);--halo2:rgba(111,141,255,.06);--shadow:rgba(16,22,43,.12)}
+@media (prefers-color-scheme: dark){
+  :root[data-look="fire"]:not([data-theme="light"]){--bg:#0b0706;--surface:#140d0b;--top:#1d130f;--ink:#f7ede7;--muted:#a8968c;--line:#2e1f18;
+    --accent:#ff8a3d;--lime:#f0304e;--grad:linear-gradient(110deg,#ffd166 0%,#ff8a3d 45%,#f0304e 100%);
+    --halo:rgba(255,122,47,.17);--halo2:rgba(240,48,78,.09);--shadow:rgba(0,0,0,.6)}
+  :root[data-look="moon"]:not([data-theme="light"]){--bg:#05070e;--surface:#0b0f1c;--top:#11172b;--ink:#ebefff;--muted:#8f99ba;--line:#1c2442;
+    --accent:#8fb0ff;--lime:#5468ff;--grad:linear-gradient(110deg,#ffffff 0%,#c3d4ff 35%,#7f9cff 70%,#5468ff 100%);
+    --halo:rgba(95,125,255,.19);--halo2:rgba(195,212,255,.06);--shadow:rgba(0,0,0,.6)}
+}
 </style>
 </head>
 <body>
