@@ -135,6 +135,13 @@ h2{font-size:.98rem;line-height:1.3}
     --accent:#8fb0ff;--lime:#5468ff;--grad:linear-gradient(110deg,#ffffff 0%,#c3d4ff 35%,#7f9cff 70%,#5468ff 100%);
     --halo:rgba(95,125,255,.19);--halo2:rgba(195,212,255,.06);--shadow:rgba(0,0,0,.6)}
 }
+/* Motion: a small press squeeze on buttons, like the Fragility site. */
+@media (prefers-reduced-motion: no-preference){
+  .seg button,.btn{transition:transform .14s cubic-bezier(.16,1,.3,1),color .18s ease-out,background-color .18s ease-out}
+  .seg button:active,.btn:active{transform:scale(.95)}
+  details[open]>p{animation:gd-open .22s cubic-bezier(.16,1,.3,1)}
+  @keyframes gd-open{from{opacity:0;transform:translateY(-4px)}}
+}
 </style>
 </head>
 <body>
