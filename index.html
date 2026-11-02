@@ -182,10 +182,10 @@ h2{font-size:.98rem;line-height:1.3}
   <div class="ld"><button type="button" class="btn" id="rfbtn">Refresh now</button><p class="sub" id="ldmsg" role="status">Checking for the latest data...</p></div>
 
   <div class="xt" role="group" aria-label="Which expiries to count: Daily, Weekly and Monthly can be mixed">
+    <button type="button" id="t-all" data-x="all" aria-pressed="true" aria-controls="chart"><b>All</b><small id="x-all">&nbsp;</small></button>
     <button type="button" id="t-day" data-x="day" aria-pressed="false" aria-controls="chart"><b>Daily</b><small id="x-day">&nbsp;</small></button>
     <button type="button" id="t-week" data-x="week" aria-pressed="false" aria-controls="chart"><b>Weekly</b><small id="x-week">&nbsp;</small></button>
     <button type="button" id="t-month" data-x="month" aria-pressed="false" aria-controls="chart"><b>Monthly</b><small id="x-month">&nbsp;</small></button>
-    <button type="button" id="t-all" data-x="all" aria-pressed="true" aria-controls="chart"><b>All</b><small id="x-all">&nbsp;</small></button>
   </div>
   <p class="sub xnote" id="xnote" role="status"></p>
 
@@ -271,7 +271,8 @@ h2{font-size:.98rem;line-height:1.3}
   function norm(on){return ONE.filter(function(q){return on.indexOf(q)>=0}).join("+")||"all"}
   function parts(p){return p==="all"?[]:p.split("+")}
   function pname(p){return p==="all"?"All":parts(p).map(function(q){return PNAME[q]}).join(" + ")}
-  var pick="all";try{var sp=localStorage.getItem("gd.exp")||"";pick=sp==="dwm"?"day+week+month":norm(sp.split("+"))}catch(e){}
+  /* Always opens on All (owner: "all expiries is the first to show"); a choice lasts until the page is closed */
+  var pick="all";
   var WD="Sun Mon Tue Wed Thu Fri Sat".split(" "),MN="Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
   function isFri(e){return new Date(e).getUTCDay()===5}
   function isMonthly(e){return isFri(e)&&new Date(e+7*864e5).getUTCMonth()!==new Date(e).getUTCMonth()}
@@ -499,7 +500,7 @@ h2{font-size:.98rem;line-height:1.3}
     if(p==="all")on=[];else if(on.indexOf(p)>=0)on.splice(on.indexOf(p),1);else on.push(p);
     var nx=norm(on);
     if(nx===pick)return;
-    pick=nx;try{localStorage.setItem("gd.exp",nx)}catch(e){}
+    pick=nx;
     apply();clear();draw();
   }
   Array.prototype.forEach.call(document.querySelectorAll(".xt button"),function(b){
