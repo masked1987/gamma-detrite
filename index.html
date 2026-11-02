@@ -135,17 +135,19 @@ h2{font-size:.98rem;line-height:1.3}
     --accent:#8fb0ff;--lime:#5468ff;--grad:linear-gradient(110deg,#ffffff 0%,#c3d4ff 35%,#7f9cff 70%,#5468ff 100%);
     --halo:rgba(95,125,255,.19);--halo2:rgba(195,212,255,.06);--shadow:rgba(0,0,0,.6)}
 }
-/* Expiry tabs (asked Nov 2026): Daily / Weekly / Monthly / D+W+M / All, like the Fragility tab bar. */
-.xt{position:relative;display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line);margin:0 0 8px}
-.xt button{font:inherit;background:none;border:0;color:var(--muted);cursor:pointer;min-height:54px;padding:6px 2px 9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:10px 10px 0 0}
+/* Expiry tabs (asked Nov 2026), like the Fragility tab bar. Daily / Weekly / Monthly switch on and
+   off on their own (any mix, owner: "separately, up to choice"); All shows every expiry. */
+.xt{position:relative;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line);margin:0 0 8px}
+.xt button{position:relative;font:inherit;background:none;border:0;color:var(--muted);cursor:pointer;min-height:54px;padding:6px 2px 9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:10px 10px 0 0}
 .xt button b{font-weight:600;font-size:.98rem;line-height:1.2}
 .xt button small{font-size:.76rem;line-height:1.2;color:var(--muted);white-space:nowrap}
-.xt button:hover,.xt button[aria-selected="true"]{color:var(--ink)}
-.xt button[aria-selected="true"] b{font-weight:750}
+.xt button:hover,.xt button[aria-pressed="true"]{color:var(--ink)}
+.xt button[aria-pressed="true"] b{font-weight:750}
 .xt button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.xt-ink{position:absolute;left:0;bottom:-1px;height:3px;width:0;border-radius:3px 3px 0 0;background:var(--grad);pointer-events:none;
-  box-shadow:0 0 12px color-mix(in srgb,var(--accent) 70%,transparent);
-  transition:transform .5s cubic-bezier(.34,1.45,.64,1),width .5s cubic-bezier(.34,1.45,.64,1)}
+.xt button::after{content:"";position:absolute;left:50%;bottom:-1px;width:min(72px,calc(100% - 24px));height:3px;border-radius:3px 3px 0 0;
+  background:var(--grad);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 70%,transparent);transform:translateX(-50%) scaleX(0);
+  transition:transform .45s cubic-bezier(.34,1.45,.64,1)}
+.xt button[aria-pressed="true"]::after{transform:translateX(-50%) scaleX(1)}
 .xnote{margin:0 4px 16px}
 .hitrow{fill:transparent;stroke:none}
 .hitrow:focus-visible{stroke:var(--ink);stroke-width:2}
@@ -153,7 +155,7 @@ h2{font-size:.98rem;line-height:1.3}
 .bv{fill:var(--ink);font-size:9.5px;font-weight:600;pointer-events:none}
 .mid{stroke:var(--line);stroke-width:1;pointer-events:none}
 .none{fill:var(--muted);font-size:12px}
-@media (prefers-reduced-motion: reduce){.xt-ink{transition:none}}
+@media (prefers-reduced-motion: reduce){.xt button::after{transition:none}}
 /* Motion: a small press squeeze on buttons, like the Fragility site. */
 @media (prefers-reduced-motion: no-preference){
   .seg button,.btn,.xt button{transition:transform .14s cubic-bezier(.16,1,.3,1),color .18s ease-out,background-color .18s ease-out}
@@ -179,13 +181,11 @@ h2{font-size:.98rem;line-height:1.3}
 
   <div class="ld"><button type="button" class="btn" id="rfbtn">Refresh now</button><p class="sub" id="ldmsg" role="status">Checking for the latest data...</p></div>
 
-  <div class="xt" role="tablist" aria-label="Which expiries to count">
-    <button type="button" role="tab" id="t-day" data-x="day" aria-selected="false" aria-controls="chart" tabindex="-1"><b>Daily</b><small id="x-day">&nbsp;</small></button>
-    <button type="button" role="tab" id="t-week" data-x="week" aria-selected="false" aria-controls="chart" tabindex="-1"><b>Weekly</b><small id="x-week">&nbsp;</small></button>
-    <button type="button" role="tab" id="t-month" data-x="month" aria-selected="false" aria-controls="chart" tabindex="-1"><b>Monthly</b><small id="x-month">&nbsp;</small></button>
-    <button type="button" role="tab" id="t-dwm" data-x="dwm" aria-selected="false" aria-controls="chart" tabindex="-1"><b>D+W+M</b><small id="x-dwm">&nbsp;</small></button>
-    <button type="button" role="tab" id="t-all" data-x="all" aria-selected="true" aria-controls="chart"><b>All</b><small id="x-all">&nbsp;</small></button>
-    <i class="xt-ink" aria-hidden="true"></i>
+  <div class="xt" role="group" aria-label="Which expiries to count: Daily, Weekly and Monthly can be mixed">
+    <button type="button" id="t-day" data-x="day" aria-pressed="false" aria-controls="chart"><b>Daily</b><small id="x-day">&nbsp;</small></button>
+    <button type="button" id="t-week" data-x="week" aria-pressed="false" aria-controls="chart"><b>Weekly</b><small id="x-week">&nbsp;</small></button>
+    <button type="button" id="t-month" data-x="month" aria-pressed="false" aria-controls="chart"><b>Monthly</b><small id="x-month">&nbsp;</small></button>
+    <button type="button" id="t-all" data-x="all" aria-pressed="true" aria-controls="chart"><b>All</b><small id="x-all">&nbsp;</small></button>
   </div>
   <p class="sub xnote" id="xnote" role="status"></p>
 
@@ -264,16 +264,21 @@ h2{font-size:.98rem;line-height:1.3}
   }
   /* Expiry tabs (asked Nov 2026): the next expiry (Daily), the nearest Friday (Weekly),
      the nearest last-Friday-of-the-month (Monthly), or every expiry (All).
+     Daily / Weekly / Monthly switch on and off on their own, so any mix can be chosen; each
+     chosen expiry keeps its own column. pick = "all" or e.g. "day+month".
      Deribit options all expire at 08:00 UTC. Heat map and key readings use only the chosen ones. */
-  var PICKS=["day","week","month","dwm","all"],PNAME={day:"Daily",week:"Weekly",month:"Monthly",dwm:"D+W+M",all:"All"},MAXCOL=10;
-  var pick="all";try{var sp=localStorage.getItem("gd.exp");if(PICKS.indexOf(sp)>=0)pick=sp}catch(e){}
+  var ONE=["day","week","month"],PNAME={day:"Daily",week:"Weekly",month:"Monthly",all:"All"},MAXCOL=10;
+  function norm(on){return ONE.filter(function(q){return on.indexOf(q)>=0}).join("+")||"all"}
+  function parts(p){return p==="all"?[]:p.split("+")}
+  function pname(p){return p==="all"?"All":parts(p).map(function(q){return PNAME[q]}).join(" + ")}
+  var pick="all";try{var sp=localStorage.getItem("gd.exp")||"";pick=sp==="dwm"?"day+week+month":norm(sp.split("+"))}catch(e){}
   var WD="Sun Mon Tue Wed Thu Fri Sat".split(" "),MN="Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
   function isFri(e){return new Date(e).getUTCDay()===5}
   function isMonthly(e){return isFri(e)&&new Date(e+7*864e5).getUTCMonth()!==new Date(e).getUTCMonth()}
   function choose(exps,p){
     if(p==="all")return exps.slice();
-    /* D+W+M (asked Nov 2026): the daily, weekly and monthly together; one date if two of them are the same expiry */
-    if(p==="dwm")return choose(exps,"day").concat(choose(exps,"week"),choose(exps,"month"))
+    /* A mix: each chosen one's date, in date order; a date that is two of them (e.g. Thursday's daily = the weekly) shows once */
+    if(p.indexOf("+")>0)return [].concat.apply([],parts(p).map(function(q){return choose(exps,q)}))
       .filter(function(e,i,a){return a.indexOf(e)===i}).sort(function(a,b){return a-b});
     for(var i=0;i<exps.length;i++){var e=exps[i];if(p==="day"||(p==="week"&&isFri(e))||(p==="month"&&isMonthly(e)))return [e]}
     return [];
@@ -394,46 +399,38 @@ h2{font-size:.98rem;line-height:1.3}
     }
     return best;
   }
-  /* Tab labels: the date each tab stands for, the line under the tabs, and the gliding underline */
+  /* Tab labels: the date each tab stands for, which are on, and the line under the tabs */
   function tabs(){
-    var list=expList(asset);
-    PICKS.forEach(function(p){
-      var ch=choose(list,p),b=$("t-"+p);
-      $("x-"+p).textContent=p==="dwm"?ch.length+" dates":p==="all"?(P?list.length+" dates":"nearest "+list.length):ch.length?dname(ch[0]):"none listed";
-      b.setAttribute("aria-selected",p===pick?"true":"false");b.tabIndex=p===pick?0:-1;
+    var list=expList(asset),on=parts(pick);
+    ONE.concat("all").forEach(function(p){
+      var ch=choose(list,p);
+      $("x-"+p).textContent=p==="all"?(P?list.length+" dates":"nearest "+list.length):ch.length?dname(ch[0]):"none listed";
+      $("t-"+p).setAttribute("aria-pressed",(p==="all"?pick==="all":on.indexOf(p)>=0)?"true":"false");
     });
     var d=D[asset],e=d.dates[0],t;
-    if(!d.count)t="Deribit has no "+PNAME[pick].toLowerCase()+" expiry listed right now. Pick another tab.";
-    else if(pick==="all")t=P?"Every listed expiry, "+d.count+" dates"+(d.later?"; the last column (\u201clater\u201d) adds up the "+d.later+" from "+dname(d.dates[d.dates.length-1])+" on":"")+".":"The "+d.count+" nearest expiries in the saved snapshot.";
-    else if(pick==="dwm"){
-      var nm={day:"the next expiry",week:"the nearest Friday",month:"the monthly"},parts=[];
-      ["day","week","month"].forEach(function(q){var x=choose(list,q)[0];if(x!==undefined)parts.push(nm[q]+" ("+dname(x)+")")});
-      t="Added together: "+parts.slice(0,-1).join(", ")+(parts.length>1?" and ":"")+parts[parts.length-1]+(d.count<parts.length?"; "+(parts.length-d.count===1?"two of them are":"they are all")+" the same date, counted once":"")+".";
+    if(!d.count)t="Deribit has no "+pname(pick).toLowerCase()+" expiry listed right now. Pick another tab.";
+    else if(pick==="all")t=(P?"Every listed expiry, "+d.count+" dates"+(d.later?"; the last column (\u201clater\u201d) adds up the "+d.later+" from "+dname(d.dates[d.dates.length-1])+" on":"")+".":"The "+d.count+" nearest expiries in the saved snapshot.")+" Tap Daily, Weekly or Monthly to pick your own.";
+    else if(on.length>1){
+      var ps=on.map(function(q){var x=choose(list,q)[0];return PNAME[q]+(x!==undefined?" ("+dname(x)+")":" (none listed)")});
+      t=ps.slice(0,-1).join(", ")+" and "+ps[ps.length-1]+", each in its own column"+(d.count<on.length?"; "+(on.length-d.count===1?"two of them are":"they are all")+" the same date, shown once":"")+". Tap one again to remove it.";
     }
     else{
       var why=pick==="day"?"the very next expiry"+(isMonthly(e)?", which is also the monthly":isFri(e)?", which is also the weekly":""):
               pick==="week"?"the nearest Friday expiry"+(isMonthly(e)?", which is also the monthly":""):"the last Friday of the month, usually the biggest";
-      t="Only options expiring "+dname(e)+", 08:00 UTC ("+inTime(e)+"): "+why+".";
+      t="Only options expiring "+dname(e)+", 08:00 UTC ("+inTime(e)+"): "+why+". Tap another to add it.";
     }
-    $("xnote").textContent=t+(d.count?" Key readings below use the same expiries.":"");
-    ink();
-  }
-  function ink(){
-    var b=$("t-"+pick),k=document.querySelector(".xt-ink");
-    if(!b||!b.offsetWidth)return;
-    var w=Math.min(b.offsetWidth-24,72);
-    k.style.width=w+"px";k.style.transform="translateX("+(b.offsetLeft+(b.offsetWidth-w)/2)+"px)";
+    $("xnote").textContent=t+(d.count?" Key readings below use only "+(pick==="all"?"these":"the chosen")+" expiries.":"");
   }
   function draw(){
     var d=D[asset],m=d.m,n=m.length,c=d.exps.length,rh=20,top=26,lx=50,cw=c?Math.floor(304/c):304,H=top+n*rh+6;
     tabs();
     $("ct").textContent=asset+(c===1?" gamma by strike":" gamma heat map");
-    $("kr").textContent="Key readings · "+PNAME[pick]+(pick!=="all"&&pick!=="dwm"&&d.count?" "+dname(d.dates[0]).slice(4):"");
+    $("kr").textContent="Key readings \u00b7 "+pname(pick)+(ONE.indexOf(pick)>=0&&d.count?" "+dname(d.dates[0]).slice(4):"");
     var on=wideOn()?"wide":"near";
     Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(x){x.setAttribute("aria-pressed",x.getAttribute("data-r")===on?"true":"false")});
     $("badge").textContent=!d.live?"Sample data":d.src==="deribit"?"Live "+d.asof:"Snapshot "+d.asof+" · "+ago(d.asof);
     if(!c||!n){
-      $("chart").innerHTML='<svg viewBox="0 0 360 60" role="img" aria-label="No data for this choice"><text class="none" x="180" y="34" text-anchor="middle">Nothing to show for '+PNAME[pick].toLowerCase()+' expiries right now.</text></svg>';
+      $("chart").innerHTML='<svg viewBox="0 0 360 60" role="img" aria-label="No data for this choice"><text class="none" x="180" y="34" text-anchor="middle">Nothing to show for '+pname(pick).toLowerCase()+' expiries right now.</text></svg>';
       $("stats").innerHTML="";return;
     }
     var max=0;m.forEach(function(r){r.forEach(function(v){max=Math.max(max,Math.abs(v))})});
@@ -496,20 +493,18 @@ h2{font-size:.98rem;line-height:1.3}
   function hit(e){var r=e.target.closest(".cell");if(r){pick1(+r.getAttribute("data-i"),+r.getAttribute("data-j"));return true}}
   $("chart").addEventListener("click",hit);
   $("chart").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){if(hit(e))e.preventDefault()}});
-  function setPick(p,focus){
-    if(p===pick)return;
-    pick=p;try{localStorage.setItem("gd.exp",p)}catch(e){}
+  /* All = everything. Daily / Weekly / Monthly add or remove themselves; removing the last one goes back to All. */
+  function toggle(p){
+    var on=parts(pick);
+    if(p==="all")on=[];else if(on.indexOf(p)>=0)on.splice(on.indexOf(p),1);else on.push(p);
+    var nx=norm(on);
+    if(nx===pick)return;
+    pick=nx;try{localStorage.setItem("gd.exp",nx)}catch(e){}
     apply();clear();draw();
-    if(focus)$("t-"+p).focus();
   }
   Array.prototype.forEach.call(document.querySelectorAll(".xt button"),function(b){
-    b.addEventListener("click",function(){setPick(b.getAttribute("data-x"))});
-    b.addEventListener("keydown",function(e){
-      var k=PICKS.indexOf(pick),to=e.key==="ArrowRight"?k+1:e.key==="ArrowLeft"?k-1:e.key==="Home"?0:e.key==="End"?PICKS.length-1:null;
-      if(to===null)return;e.preventDefault();setPick(PICKS[(to+PICKS.length)%PICKS.length],true);
-    });
+    b.addEventListener("click",function(){toggle(b.getAttribute("data-x"))});
   });
-  if(window.ResizeObserver)new ResizeObserver(ink).observe(document.querySelector(".xt"));else window.addEventListener("resize",ink);
   Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(b){
     b.addEventListener("click",function(){
       var r=b.getAttribute("data-r");
