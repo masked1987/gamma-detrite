@@ -135,10 +135,29 @@ h2{font-size:.98rem;line-height:1.3}
     --accent:#8fb0ff;--lime:#5468ff;--grad:linear-gradient(110deg,#ffffff 0%,#c3d4ff 35%,#7f9cff 70%,#5468ff 100%);
     --halo:rgba(95,125,255,.19);--halo2:rgba(195,212,255,.06);--shadow:rgba(0,0,0,.6)}
 }
+/* Expiry tabs (asked Nov 2026): Daily / Weekly / Monthly / All, like the Fragility tab bar. */
+.xt{position:relative;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line);margin:0 0 8px}
+.xt button{font:inherit;background:none;border:0;color:var(--muted);cursor:pointer;min-height:54px;padding:6px 2px 9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:10px 10px 0 0}
+.xt button b{font-weight:600;font-size:.98rem;line-height:1.2}
+.xt button small{font-size:.76rem;line-height:1.2;color:var(--muted);white-space:nowrap}
+.xt button:hover,.xt button[aria-selected="true"]{color:var(--ink)}
+.xt button[aria-selected="true"] b{font-weight:750}
+.xt button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.xt-ink{position:absolute;left:0;bottom:-1px;height:3px;width:0;border-radius:3px 3px 0 0;background:var(--grad);pointer-events:none;
+  box-shadow:0 0 12px color-mix(in srgb,var(--accent) 70%,transparent);
+  transition:transform .5s cubic-bezier(.34,1.45,.64,1),width .5s cubic-bezier(.34,1.45,.64,1)}
+.xnote{margin:0 4px 16px}
+.hitrow{fill:transparent;stroke:none}
+.hitrow:focus-visible{stroke:var(--ink);stroke-width:2}
+.bar{pointer-events:none;fill-opacity:.85}
+.bv{fill:var(--ink);font-size:9.5px;font-weight:600;pointer-events:none}
+.mid{stroke:var(--line);stroke-width:1;pointer-events:none}
+.none{fill:var(--muted);font-size:12px}
+@media (prefers-reduced-motion: reduce){.xt-ink{transition:none}}
 /* Motion: a small press squeeze on buttons, like the Fragility site. */
 @media (prefers-reduced-motion: no-preference){
-  .seg button,.btn{transition:transform .14s cubic-bezier(.16,1,.3,1),color .18s ease-out,background-color .18s ease-out}
-  .seg button:active,.btn:active{transform:scale(.91)}
+  .seg button,.btn,.xt button{transition:transform .14s cubic-bezier(.16,1,.3,1),color .18s ease-out,background-color .18s ease-out}
+  .seg button:active,.btn:active,.xt button:active{transform:scale(.91)}
   details[open]>p{animation:gd-open .22s cubic-bezier(.16,1,.3,1)}
   @keyframes gd-open{from{opacity:0;transform:translateY(-4px)}}
 }
@@ -159,6 +178,15 @@ h2{font-size:.98rem;line-height:1.3}
   <p class="lede">See which strikes and expiries could pull price in or push it away. The darker the cell, the stronger the gamma.</p>
 
   <div class="ld"><button type="button" class="btn" id="rfbtn">Refresh now</button><p class="sub" id="ldmsg" role="status">Checking for the latest data...</p></div>
+
+  <div class="xt" role="tablist" aria-label="Which expiries to count">
+    <button type="button" role="tab" id="t-day" data-x="day" aria-selected="false" aria-controls="chart" tabindex="-1"><b>Daily</b><small id="x-day">&nbsp;</small></button>
+    <button type="button" role="tab" id="t-week" data-x="week" aria-selected="false" aria-controls="chart" tabindex="-1"><b>Weekly</b><small id="x-week">&nbsp;</small></button>
+    <button type="button" role="tab" id="t-month" data-x="month" aria-selected="false" aria-controls="chart" tabindex="-1"><b>Monthly</b><small id="x-month">&nbsp;</small></button>
+    <button type="button" role="tab" id="t-all" data-x="all" aria-selected="true" aria-controls="chart"><b>All</b><small id="x-all">&nbsp;</small></button>
+    <i class="xt-ink" aria-hidden="true"></i>
+  </div>
+  <p class="sub xnote" id="xnote" role="status"></p>
 
   <section class="panel" style="margin-top:0" aria-labelledby="ct">
     <div class="ph"><h2 id="ct">ETH gamma heat map</h2><span class="unit">Each number is US$ thousands per 1% move</span></div>
@@ -219,23 +247,9 @@ h2{font-size:.98rem;line-height:1.3}
       }
       m.push(row);
     }
-    return {spot:d.spot,pc:d.pc,exps:SAMPLE_EXP,live:false,strikes:strikes,m:m};
+    return {spot:d.spot,pc:d.pc,exps:SAMPLE_EXP,asof:stamp(Date.now()),live:false,strikes:strikes,m:m};
   }
   var D={};
-  /* src: "deribit" (computed in this browser just now) or "saved" (snapshot written by gamma_refresh.py) */
-  function build(LV,src){
-    Object.keys(S).forEach(function(a){
-      var L=LV&&LV[a];
-      D[a]=L?{spot:L.spot,asof:L.asof,pc:L.pc,exps:L.exps,strikes:L.strikes,m:L.m,live:true,src:src}:sample(S[a]);
-      D[a].row=D[a].m.map(function(r){return r.reduce(function(x,y){return x+y},0)});
-    });
-  }
-  function valid(LV){
-    try{return ["BTC","ETH"].every(function(a){
-      var L=LV[a];
-      return L&&isFinite(L.spot)&&L.exps.length>0&&L.strikes.length===L.m.length&&L.m.every(function(r){return r.length===L.exps.length&&r.every(isFinite)});
-    })}catch(e){return false}
-  }
   /* Same calculation as gamma_refresh.py, run in the browser so the map is current on every visit */
   var MON="JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split(" "),NAME=/^[A-Z]+-(\d{1,2})([A-Z]{3})(\d{2})-([\d.d]+)-([CP])$/;
   function pad(n){return (n<10?"0":"")+n}
@@ -247,8 +261,24 @@ h2{font-size:.98rem;line-height:1.3}
     [1,2,2.5,5,10].forEach(function(m){if(Math.abs(Math.log(m*p/x))<Math.abs(Math.log(best/x)))best=m*p});
     return best;
   }
-  function compute(rows,spot,now,wide){
-    var cell={},eset={},po=0,co=0;
+  /* Expiry tabs (asked Nov 2026): the next expiry (Daily), the nearest Friday (Weekly),
+     the nearest last-Friday-of-the-month (Monthly), or every expiry (All).
+     Deribit options all expire at 08:00 UTC. Heat map and key readings use only the chosen ones. */
+  var PICKS=["day","week","month","all"],PNAME={day:"Daily",week:"Weekly",month:"Monthly",all:"All"},MAXCOL=10;
+  var pick="all";try{var sp=localStorage.getItem("gd.exp");if(PICKS.indexOf(sp)>=0)pick=sp}catch(e){}
+  var WD="Sun Mon Tue Wed Thu Fri Sat".split(" "),MN="Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+  function isFri(e){return new Date(e).getUTCDay()===5}
+  function isMonthly(e){return isFri(e)&&new Date(e+7*864e5).getUTCMonth()!==new Date(e).getUTCMonth()}
+  function choose(exps,p){
+    if(p==="all")return exps.slice();
+    for(var i=0;i<exps.length;i++){var e=exps[i];if(p==="day"||(p==="week"&&isFri(e))||(p==="month"&&isMonthly(e)))return [e]}
+    return [];
+  }
+  function dname(e){var d=new Date(e);return WD[d.getUTCDay()]+" "+d.getUTCDate()+" "+MN[d.getUTCMonth()]}
+  function inTime(e){var h=(e-Date.now())/36e5;return h<1?"within the hour":h<48?"in "+Math.round(h)+" h":"in "+Math.round(h/24)+" days"}
+  /* One pass over the Deribit chain: gamma per strike and expiry, plus open contracts per expiry */
+  function parse(rows,spot,now){
+    var cell={},eset={},po={},co={};
     rows.forEach(function(s){
       var p=NAME.exec(s.instrument_name||""),mo=p?MON.indexOf(p[2]):-1;
       if(mo<0)return;
@@ -256,28 +286,61 @@ h2{font-size:.98rem;line-height:1.3}
           oi=s.open_interest||0,iv=(s.mark_iv||0)/100,F=s.underlying_price||spot,T=(e-now)/(365*864e5);
       if(oi<=0||iv<=0||T<=0)return;
       var g=gam(F,K,iv,T)*oi*spot*spot*0.01;
-      if(p[5]==="C")co+=oi;else{po+=oi;g=-g}
+      if(p[5]==="C")co[e]=(co[e]||0)+oi;else{po[e]=(po[e]||0)+oi;g=-g}
       cell[K+"|"+e]=(cell[K+"|"+e]||0)+g;eset[e]=1;
     });
-    var exps=Object.keys(eset).map(Number).sort(function(a,b){return a-b}).slice(0,10),kset={};
-    Object.keys(cell).forEach(function(key){var q=key.split("|");if(exps.indexOf(+q[1])>=0)kset[q[0]]=1});
-    var ks;
+    return {spot:spot,now:now,cell:cell,po:po,co:co,exps:Object.keys(eset).map(Number).sort(function(a,b){return a-b})};
+  }
+  /* Heat map for the chosen expiries. With more than MAXCOL, the last column adds up the later ones. */
+  function view(P,wide,p){
+    var spot=P.spot,now=P.now,chosen=choose(P.exps,p),
+        cols=chosen.length>MAXCOL?chosen.slice(0,MAXCOL-1):chosen.slice(),rest=chosen.slice(cols.length),
+        nc=cols.length+(rest.length?1:0),col={},cell={},kset={},po=0,co=0,ks,step,lo,hi;
+    chosen.forEach(function(e,i){col[e]=Math.min(i,cols.length);po+=P.po[e]||0;co+=P.co[e]||0});
     if(wide){
       /* Strikes within +-WIDE_PCT grouped into round price rows; every row is kept so the axis is evenly spaced */
-      var step=niceStep(spot*2*WIDE_PCT/100/WIDE_ROWS),lo=Math.ceil(spot*(1-WIDE_PCT/100)/step),hi=Math.floor(spot*(1+WIDE_PCT/100)/step),wc={};
-      Object.keys(cell).forEach(function(key){
-        var q=key.split("|"),b=Math.round(+q[0]/step);
-        if(b>=lo&&b<=hi)wc[b*step+"|"+q[1]]=(wc[b*step+"|"+q[1]]||0)+cell[key];
-      });
-      cell=wc;ks=[];
-      for(var b=lo;b<=hi;b++)ks.push(b*step);
-    }else{
-      ks=Object.keys(kset).map(Number).sort(function(a,b){return Math.abs(a-spot)-Math.abs(b-spot)}).slice(0,21).sort(function(a,b){return a-b});
+      step=niceStep(spot*2*WIDE_PCT/100/WIDE_ROWS);lo=Math.ceil(spot*(1-WIDE_PCT/100)/step);hi=Math.floor(spot*(1+WIDE_PCT/100)/step);
     }
-    var today=Math.floor(now/864e5);
+    Object.keys(P.cell).forEach(function(key){
+      var q=key.split("|"),e=+q[1],K=+q[0];
+      if(!(e in col))return;
+      if(wide){var b=Math.round(K/step);if(b<lo||b>hi)return;K=b*step}
+      kset[K]=1;var ck=K+"|"+col[e];cell[ck]=(cell[ck]||0)+P.cell[key];
+    });
+    if(wide){ks=[];for(var b=lo;b<=hi;b++)ks.push(b*step)}
+    else ks=Object.keys(kset).map(Number).sort(function(a,b){return Math.abs(a-spot)-Math.abs(b-spot)}).slice(0,21).sort(function(a,b){return a-b});
+    var today=Math.floor(now/864e5),js=[];for(var j=0;j<nc;j++)js.push(j);
     return {spot:Math.round(spot*100)/100,asof:stamp(now),pc:co?Math.round(po/co*100)/100:null,strikes:ks,
-      exps:exps.map(function(e){return (Math.floor(e/864e5)-today)+"d"}),
-      m:ks.map(function(k){return exps.map(function(e){return Math.round((cell[k+"|"+e]||0)/100)/1e4})})};
+      exps:cols.map(function(e){return (Math.floor(e/864e5)-today)+"d"}).concat(rest.length?["later"]:[]),
+      dates:cols.concat(rest.length?[rest[0]]:[]),later:rest.length,count:chosen.length,
+      m:ks.map(function(k){return js.map(function(j){return Math.round((cell[k+"|"+j]||0)/100)/1e4})})};
+  }
+  /* Saved snapshot (or sample): expiry dates come from its "Nd" labels; only its columns can be chosen */
+  function savedDates(L){var t=Date.parse(L.asof.replace(" UTC","Z").replace(" ","T")),d0=Math.floor(t/864e5)*864e5;
+    return L.exps.map(function(x){return d0+parseInt(x,10)*864e5+8*36e5})}
+  function fromSaved(L,p){
+    var ds=savedDates(L),ch=choose(ds,p),ix=ch.map(function(e){return ds.indexOf(e)});
+    return {spot:L.spot,asof:L.asof,pc:L.pc,strikes:L.strikes,exps:ix.map(function(i){return L.exps[i]}),dates:ch,later:0,count:ch.length,
+      m:L.m.map(function(r){return ix.map(function(i){return r[i]})})};
+  }
+  var P=null,SV={LV:LIVE,src:"saved"},range="near";
+  try{if(localStorage.getItem("gd.range")==="wide")range="wide"}catch(e){}
+  function wideOn(){return range==="wide"&&!!P}
+  function base(a){return SV.LV&&SV.LV[a]?SV.LV[a]:sample(S[a])}
+  function expList(a){return P?P[a].exps:savedDates(base(a))}
+  function apply(){
+    Object.keys(S).forEach(function(a){
+      var x=P?view(P[a],wideOn(),pick):fromSaved(base(a),pick);
+      x.live=P?true:!!(SV.LV&&SV.LV[a]);x.src=P?"deribit":"saved";
+      x.row=x.m.map(function(r){return r.reduce(function(s,y){return s+y},0)});
+      D[a]=x;
+    });
+  }
+  function valid(LV){
+    try{return ["BTC","ETH"].every(function(a){
+      var L=LV[a];
+      return L&&isFinite(L.spot)&&L.exps.length>0&&L.strikes.length===L.m.length&&L.m.every(function(r){return r.length===L.exps.length&&r.every(isFinite)});
+    })}catch(e){return false}
   }
   function deribit(path){
     return fetch("https://www.deribit.com/api/v2/public/"+path,{cache:"no-store"})
@@ -287,10 +350,11 @@ h2{font-size:.98rem;line-height:1.3}
     var now=Date.now();
     return Promise.all(["BTC","ETH"].map(function(a){
       return Promise.all([deribit("get_index_price?index_name="+a.toLowerCase()+"_usd"),deribit("get_book_summary_by_currency?currency="+a+"&kind=option")])
-        .then(function(r){return {near:compute(r[1],r[0].index_price,now),wide:compute(r[1],r[0].index_price,now,true)}});
+        .then(function(r){return parse(r[1],r[0].index_price,now)});
     })).then(function(r){
-      var out={near:{BTC:r[0].near,ETH:r[1].near},wide:{BTC:r[0].wide,ETH:r[1].wide}};
-      if(!valid(out.near)||!valid(out.wide))throw 0;return out;
+      var out={BTC:r[0],ETH:r[1]};
+      [false,true].forEach(function(w){if(!valid({BTC:view(out.BTC,w,"all"),ETH:view(out.ETH,w,"all")}))throw 0});
+      return out;
     });
   }
   function ago(asof){
@@ -301,16 +365,13 @@ h2{font-size:.98rem;line-height:1.3}
     if(m<48*60)return Math.floor(m/60)+" h "+pad(m%60)+" min old";
     return Math.round(m/1440)+" days old";
   }
-  var NEAR={LV:LIVE,src:"saved"},WIDE=null,range="near";
-  try{if(localStorage.getItem("gd.range")==="wide")range="wide"}catch(e){}
-  function cur(){return range==="wide"&&WIDE?WIDE:NEAR}
-  function apply(){var x=cur();build(x.LV,x.src)}
   apply();
   var asset="ETH",sel=null;
   function $(id){return document.getElementById(id)}
   function f(n){return n.toLocaleString("en-US")}
-  function sg(v){return (v>0?"+":v<0?"\u2212":"")+f(Math.round(Math.abs(v)*1000))+"K"}
-  function cl(v){return (v<0?"\u2212":"")+Math.round(Math.abs(v)*1000)}
+  function sg(v){return (v>0?"+":v<0?"−":"")+f(Math.round(Math.abs(v)*1000))+"K"}
+  function cl(v){return (v<0?"−":"")+Math.round(Math.abs(v)*1000)}
+  function bl(v){return (v<0?"−":"+")+f(Math.round(Math.abs(v)*1000))}
   /* Row below the gap that price p falls into (-1 below the first strike), so markers sit between rows and never cover numbers */
   function gapOf(d,p){
     var k=d.strikes,n=k.length;
@@ -329,15 +390,61 @@ h2{font-size:.98rem;line-height:1.3}
     }
     return best;
   }
+  /* Tab labels: the date each tab stands for, the line under the tabs, and the gliding underline */
+  function tabs(){
+    var list=expList(asset);
+    PICKS.forEach(function(p){
+      var ch=choose(list,p),b=$("t-"+p);
+      $("x-"+p).textContent=p==="all"?(P?list.length+" dates":"nearest "+list.length):ch.length?dname(ch[0]):"none listed";
+      b.setAttribute("aria-selected",p===pick?"true":"false");b.tabIndex=p===pick?0:-1;
+    });
+    var d=D[asset],e=d.dates[0],t;
+    if(!d.count)t="Deribit has no "+PNAME[pick].toLowerCase()+" expiry listed right now. Pick another tab.";
+    else if(pick==="all")t=P?"Every listed expiry, "+d.count+" dates"+(d.later?"; the last column (\u201clater\u201d) adds up the "+d.later+" from "+dname(d.dates[d.dates.length-1])+" on":"")+".":"The "+d.count+" nearest expiries in the saved snapshot.";
+    else{
+      var why=pick==="day"?"the very next expiry"+(isMonthly(e)?", which is also the monthly":isFri(e)?", which is also the weekly":""):
+              pick==="week"?"the nearest Friday expiry"+(isMonthly(e)?", which is also the monthly":""):"the last Friday of the month, usually the biggest";
+      t="Only options expiring "+dname(e)+", 08:00 UTC ("+inTime(e)+"): "+why+".";
+    }
+    $("xnote").textContent=t+(d.count?" Key readings below use the same expiries.":"");
+    ink();
+  }
+  function ink(){
+    var b=$("t-"+pick),k=document.querySelector(".xt-ink");
+    if(!b||!b.offsetWidth)return;
+    var w=Math.min(b.offsetWidth-24,72);
+    k.style.width=w+"px";k.style.transform="translateX("+(b.offsetLeft+(b.offsetWidth-w)/2)+"px)";
+  }
   function draw(){
-    var d=D[asset],m=d.m,n=m.length,c=d.exps.length,rh=20,top=26,lx=50,cw=Math.floor(304/c),H=top+n*rh+6;
+    var d=D[asset],m=d.m,n=m.length,c=d.exps.length,rh=20,top=26,lx=50,cw=c?Math.floor(304/c):304,H=top+n*rh+6;
+    tabs();
+    $("ct").textContent=asset+(c===1?" gamma by strike":" gamma heat map");
+    $("kr").textContent="Key readings · "+PNAME[pick]+(pick!=="all"&&d.count?" "+dname(d.dates[0]).slice(4):"");
+    var on=wideOn()?"wide":"near";
+    Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(x){x.setAttribute("aria-pressed",x.getAttribute("data-r")===on?"true":"false")});
+    $("badge").textContent=!d.live?"Sample data":d.src==="deribit"?"Live "+d.asof:"Snapshot "+d.asof+" · "+ago(d.asof);
+    if(!c||!n){
+      $("chart").innerHTML='<svg viewBox="0 0 360 60" role="img" aria-label="No data for this choice"><text class="none" x="180" y="34" text-anchor="middle">Nothing to show for '+PNAME[pick].toLowerCase()+' expiries right now.</text></svg>';
+      $("stats").innerHTML="";return;
+    }
     var max=0;m.forEach(function(r){r.forEach(function(v){max=Math.max(max,Math.abs(v))})});
     if(!max)max=1;
-    var h='<svg viewBox="0 0 360 '+H+'" role="group" aria-label="Gamma heat map by strike and expiry">';
-    d.exps.forEach(function(e,j){h+='<text class="k" x="'+(lx+j*cw+cw/2)+'" y="16" text-anchor="middle">'+e+'</text>'});
+    var h='<svg viewBox="0 0 360 '+H+'" role="group" aria-label="Gamma '+(c===1?"by strike for one expiry":"heat map by strike and expiry")+'">';
+    if(c===1)h+='<text class="k" x="'+(lx+152)+'" y="16" text-anchor="middle">'+dname(d.dates[0])+' · '+d.exps[0]+'</text>';
+    else d.exps.forEach(function(e,j){h+='<text class="k" x="'+(lx+j*cw+cw/2)+'" y="16" text-anchor="middle">'+e+'</text>'});
+    if(c===1)h+='<line class="mid" x1="'+(lx+152)+'" x2="'+(lx+152)+'" y1="'+(top-4)+'" y2="'+(top+n*rh)+'"/>';
     for(var i=n-1;i>=0;i--){
       var y=top+(n-1-i)*rh;
       h+='<text class="k" x="'+(lx-6)+'" y="'+(y+14)+'" text-anchor="end">'+f(d.strikes[i])+'</text>';
+      if(c===1){
+        /* One expiry: a bar per strike, blue to the right, pink to the left of the middle line */
+        var v1=m[i][0],cx=lx+152,len=Math.max(2,148*Math.abs(v1)/max);
+        h+='<rect class="cell hitrow" x="'+lx+'" y="'+y+'" width="304" height="'+rh+'" data-i="'+i+'" data-j="0" tabindex="0" role="button" aria-label="Strike '+f(d.strikes[i])+', gamma '+sg(v1)+'"/>';
+        if(Math.abs(v1)<0.005)continue;
+        h+='<rect class="bar '+(v1<0?'neg':'pos')+'" x="'+(v1<0?cx-len:cx)+'" y="'+(y+3)+'" width="'+len+'" height="'+(rh-6)+'" rx="3"/>';
+        h+='<text class="bv" x="'+(v1<0?cx+6:cx-6)+'" y="'+(y+13.5)+'" text-anchor="'+(v1<0?'start':'end')+'">'+bl(v1)+'</text>';
+        continue;
+      }
       for(var j=0;j<c;j++){
         var v=m[i][j],x=lx+j*cw;
         if(Math.abs(v)<0.005){h+='<rect class="emp" x="'+x+'" y="'+y+'" width="'+cw+'" height="'+rh+'"/>';continue}
@@ -353,50 +460,60 @@ h2{font-size:.98rem;line-height:1.3}
     if(fl!==null)h+='<line class="flip" x1="'+(lx-4)+'" x2="'+xe+'" y1="'+yAt(fl)+'" y2="'+yAt(fl)+'"/>';
     if(sel){h+='<rect class="cellsel" x="'+(lx+sel[1]*cw)+'" y="'+(top+(n-1-sel[0])*rh)+'" width="'+cw+'" height="'+rh+'"/>'}
     $("chart").innerHTML=h+'</svg>';
-    $("ct").textContent=asset+" gamma heat map";
-    var on=cur()===WIDE?"wide":"near";
-    Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(x){x.setAttribute("aria-pressed",x.getAttribute("data-r")===on?"true":"false")});
-    $("badge").textContent=!d.live?"Sample data":d.src==="deribit"?"Live "+d.asof:"Snapshot "+d.asof+" \u00b7 "+ago(d.asof);
-    var tot=d.row.reduce(function(a,b){return a+b},0),ps=0,ns=0,bp=0,bn=0;
+    var tot=d.row.reduce(function(a,b){return a+b},0),ps=0,ns=0,bp=0,bn=0,ex=c===1?"this expiry":"the chosen expiries";
     d.row.forEach(function(v,i){if(v>d.row[bp])bp=i;if(v<d.row[bn])bn=i});
     m.forEach(function(r){r.forEach(function(v){if(v>0)ps+=v;else ns+=v})});
     var st=[
       ["Net gamma",sg(tot),tot>=0?"Net positive: dealer hedging tends to calm price swings.":"Net negative: dealer hedging tends to amplify price swings."],
-      ["Positive gamma total",sg(ps),"Added up across every strike and expiry in blue."],
-      ["Negative gamma total",sg(ns),"Added up across every strike and expiry in pink."],
-      ["Strongest positive strike",f(d.strikes[bp]),"Darkest blue row once all expiries are combined."],
-      ["Strongest negative strike",f(d.strikes[bn]),"Darkest pink row once all expiries are combined."],
+      ["Positive gamma total",sg(ps),"Added up across every strike in blue, "+ex+" only."],
+      ["Negative gamma total",sg(ns),"Added up across every strike in pink, "+ex+" only."],
+      ["Strongest positive strike",f(d.strikes[bp]),c===1?"Longest blue bar.":"Darkest blue row once the chosen expiries are combined."],
+      ["Strongest negative strike",f(d.strikes[bn]),c===1?"Longest pink bar.":"Darkest pink row once the chosen expiries are combined."],
       ["Gamma flip",fl===null?"None":f(fl),fl===null?"No sign change in these strikes.":"Nearest strike area where gamma changes sign. Spot is "+(d.spot>fl?"above":"below")+" it."],
-      ["Put/call ratio",d.pc==null?"n/a":d.pc.toFixed(2),d.pc==null?"":(d.pc<1?"More call than put open interest.":"More put than call open interest.")]
+      ["Put/call ratio",d.pc==null?"n/a":d.pc.toFixed(2),d.pc==null?"":(d.pc<1?"More call than put open interest":"More put than call open interest")+(P?", "+ex+".":", nearest expiries.")]
     ];
     $("stats").innerHTML=st.map(function(s){return '<div class="stat"><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd><p>'+s[2]+'</p></div>'}).join("");
   }
-  function pick(i,j){
+  function pick1(i,j){
     sel=[i,j];readout(i,j);
     draw();
     var r=document.querySelector('.cell[data-i="'+i+'"][data-j="'+j+'"]');if(r)r.focus();
   }
   function readout(i,j){
-    var d=D[asset],v=d.m[i][j];
-    $("read").textContent=(cur()===WIDE?"Strikes near ":"Strike ")+f(d.strikes[i])+", "+d.exps[j]+" expiry: US$ "+sg(v)+" per 1% move. "+(v>=0?"Positive gamma. Hedging here tends to calm price.":"Negative gamma. Hedging here can speed price up.");
+    var d=D[asset],v=d.m[i][j],ex=d.exps.length===1?dname(d.dates[0])+" expiry":d.exps[j]==="later"?"later expiries added together":d.exps[j]+" expiry";
+    $("read").textContent=(wideOn()?"Strikes near ":"Strike ")+f(d.strikes[i])+", "+ex+": US$ "+sg(v)+" per 1% move. "+(v>=0?"Positive gamma. Hedging here tends to calm price.":"Negative gamma. Hedging here can speed price up.");
   }
-  function hit(e){var r=e.target.closest(".cell");if(r){pick(+r.getAttribute("data-i"),+r.getAttribute("data-j"));return true}}
+  function clear(){sel=null;$("read").textContent="Tap a "+(D[asset].exps.length===1?"bar":"cell")+" to see its gamma."}
+  function hit(e){var r=e.target.closest(".cell");if(r){pick1(+r.getAttribute("data-i"),+r.getAttribute("data-j"));return true}}
   $("chart").addEventListener("click",hit);
   $("chart").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){if(hit(e))e.preventDefault()}});
+  function setPick(p,focus){
+    if(p===pick)return;
+    pick=p;try{localStorage.setItem("gd.exp",p)}catch(e){}
+    apply();clear();draw();
+    if(focus)$("t-"+p).focus();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".xt button"),function(b){
+    b.addEventListener("click",function(){setPick(b.getAttribute("data-x"))});
+    b.addEventListener("keydown",function(e){
+      var k=PICKS.indexOf(pick),to=e.key==="ArrowRight"?k+1:e.key==="ArrowLeft"?k-1:e.key==="Home"?0:e.key==="End"?3:null;
+      if(to===null)return;e.preventDefault();setPick(PICKS[(to+4)%4],true);
+    });
+  });
+  if(window.ResizeObserver)new ResizeObserver(ink).observe(document.querySelector(".xt"));else window.addEventListener("resize",ink);
   Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(b){
     b.addEventListener("click",function(){
       var r=b.getAttribute("data-r");
-      if(r==="wide"&&!WIDE){$("read").textContent="The wide view needs live data from Deribit. Tap Refresh now to try again.";return}
+      if(r==="wide"&&!P){$("read").textContent="The wide view needs live data from Deribit. Tap Refresh now to try again.";return}
       range=r;try{localStorage.setItem("gd.range",r)}catch(e){}
-      sel=null;apply();$("read").textContent="Tap a cell to see its gamma.";draw();
+      apply();clear();draw();
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-a]"),function(b){
     b.addEventListener("click",function(){
-      asset=b.getAttribute("data-a");sel=null;
+      asset=b.getAttribute("data-a");
       Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-a]"),function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
-      $("read").textContent="Tap a cell to see its gamma.";
-      draw();
+      clear();draw();
     });
   });
   var URLS=["https://raw.githubusercontent.com/masked1987/gamma-detrite/main/gamma-data.json","gamma-data.json"];
@@ -407,25 +524,24 @@ h2{font-size:.98rem;line-height:1.3}
       .then(function(LV){if(!valid(LV))throw 0;return LV})
       .catch(function(){return tryUrl(i+1)});
   }
-  /* Keeps the selected cell only if it still points at the same strike and expiry */
-  function show(near,wide,src){
+  /* New data in: keeps the selected cell only if it still points at the same strike and expiry */
+  function refresh(){
     var old=D[asset];
-    NEAR={LV:near,src:src};
-    if(wide)WIDE={LV:wide,src:src};else if(near.BTC.asof>(WIDE?WIDE.LV.BTC.asof:""))WIDE=null;
-    var nw=cur().LV[asset],keep=sel&&nw.strikes.join()===old.strikes.join()&&nw.exps.join()===old.exps.join();
     apply();
-    if(keep)readout(sel[0],sel[1]);
-    else{sel=null;$("read").textContent="Tap a cell to see its gamma."}
+    var nw=D[asset];
+    if(sel&&nw.strikes.join()===old.strikes.join()&&nw.exps.join()===old.exps.join())readout(sel[0],sel[1]);else clear();
     draw();
   }
   function fetchLive(){
     $("ldmsg").textContent="Loading live data from Deribit...";
     fromDeribit().then(function(r){
-      show(r.near,r.wide,"deribit");
-      $("ldmsg").textContent="Live from Deribit as of "+r.near.BTC.asof.slice(11)+". Updates every 5 minutes while this page is open.";
+      P=r;refresh();
+      $("ldmsg").textContent="Live from Deribit as of "+D.BTC.asof.slice(11)+". Updates every 5 minutes while this page is open.";
     }).catch(function(){
       return tryUrl(0).then(function(LV){
-        if(LV.BTC.asof>NEAR.LV.BTC.asof)show(LV,null,"saved");else draw();
+        if(LV.BTC.asof>SV.LV.BTC.asof)SV={LV:LV,src:"saved"};
+        if(P&&stamp(P.BTC.now)<SV.LV.BTC.asof)P=null;
+        refresh();
         $("ldmsg").textContent="Deribit did not respond, so this is data from "+D.BTC.asof+" ("+ago(D.BTC.asof)+"). Tap Refresh now to try again.";
       });
     }).catch(function(){
@@ -434,6 +550,7 @@ h2{font-size:.98rem;line-height:1.3}
     });
   }
   $("rfbtn").addEventListener("click",fetchLive);
+  clear();
   draw();
   fetchLive();
   setInterval(fetchLive,300000);
