@@ -1,7 +1,9 @@
 name: Refresh gamma data
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    # Every 2 hours: private repos get 2,000 free job minutes a month, shared
+    # with fragility's alert job (every 30 minutes).
+    - cron: "22 */2 * * *"
   workflow_dispatch:
 permissions:
   contents: write
