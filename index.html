@@ -201,6 +201,7 @@ h2{font-size:.98rem;line-height:1.3}
 .vchart .band{fill:var(--ink);fill-opacity:.09}
 .vchart .hb{fill:transparent;cursor:pointer}
 .vhseg{display:grid;grid-template-columns:repeat(5,1fr);width:100%;margin:4px 0 6px}
+.vhkseg{display:grid;grid-template-columns:repeat(4,1fr);width:100%;margin:4px 0 4px}.vhkseg button{min-width:0}
 .vhseg button{min-width:0}
 .vhchart .vhBullish{fill:var(--pos);fill-opacity:.17}.vhchart .vhBearish{fill:var(--neg);fill-opacity:.17}
 .vhchart .vhline{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
@@ -809,7 +810,10 @@ h2{font-size:.98rem;line-height:1.3}
      charm did change for bullish or bearish"). Readings come from the phone-alert job's log
      (fragility data branch, vanna-log.csv: ETH, All expiries, every ~15 min since 7 Nov 2026 10:16 UTC);
      price from Bitstamp ETH/USD candles. Older history can't be rebuilt (past option positions aren't free). */
-  var VH={log:null,logAt:0,busy:false,err:null,c:{}},vhR=7;
+  var VH={log:null,logAt:0,busy:false,err:null,c:{}},vhR=7,vhK="all";
+  /* Chart tabs (owner: "make daily tab weekly and monthly separately"): All = the phone-alert reading;
+     Daily / Weekly / Monthly = that one expiry alone, saved in the background (no alert) */
+  var VH_KINDS=[["all","All"],["day","Daily"],["week","Weekly"],["month","Monthly"]];
   var VH_LOG=["https://raw.githubusercontent.com/masked1987/fragility/data/vanna-log.csv","/gh/fragility/data/vanna-log.csv"],
       VH_GAP=3*36e5,VH_RANGES=[[1,"1D"],[3,"3D"],[7,"7D"],[30,"30D"],[0,"All"]];
   function vhParse(txt){
@@ -817,7 +821,10 @@ h2{font-size:.98rem;line-height:1.3}
     lines.forEach(function(l){
       var c=l.split(","),o={};head.forEach(function(h,i){o[h]=c[i]});
       var t=Date.parse(o.time_utc),s=+o.spot;
-      if(isFinite(t)&&s>0&&/^(Bullish|Bearish|Neutral)$/.test(o.label))out.push({t:t,spot:s,label:o.label,flat:+o.flow_flat,pct:+o.pct_turnover,dn:o.label_iv_minus3,fl:o.label_flat,up:o.label_iv_plus3});
+      var L=/^(Bullish|Bearish|Neutral)$/;
+      if(isFinite(t)&&s>0&&L.test(o.label))out.push({t:t,spot:s,label:o.label,
+        k:{all:{label:o.label},day:L.test(o.day_label)?{label:o.day_label,exp:o.day_expiry}:null,
+           week:L.test(o.week_label)?{label:o.week_label,exp:o.week_expiry}:null,month:L.test(o.month_label)?{label:o.month_label,exp:o.month_expiry}:null}});
     });
     out.sort(function(a,b){return a.t-b.t});
     return out.filter(function(r,i){return !i||r.t!==out[i-1].t});
@@ -842,17 +849,22 @@ h2{font-size:.98rem;line-height:1.3}
   function ukTime(t,short){return new Date(t).toLocaleString("en-GB",short?{timeZone:"Europe/London",day:"numeric",month:"short"}:{timeZone:"Europe/London",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
   /* Price at time t from candles (last close at or before t), else the reading's own price */
   function vhPx(k,t){var p=null;for(var i=0;i<k.length&&k[i].t<=t;i++)p=k[i].c;return p}
+  /* The readings for one tab: time, price, that tab's label (and expiry date for Daily / Weekly / Monthly) */
+  function vhView(all,kind){
+    var out=[];all.forEach(function(r){var x=r.k[kind];if(x)out.push({t:r.t,spot:r.spot,label:x.label,exp:x.exp})});return out;
+  }
   function vhChanges(log){
-    var ch=[];for(var i=1;i<log.length;i++)if(log[i].label!==log[i-1].label)ch.push({r:log[i],from:log[i-1].label,gap:log[i].t-log[i-1].t>VH_GAP});
+    var ch=[];for(var i=1;i<log.length;i++)if(log[i].label!==log[i-1].label)ch.push({r:log[i],from:log[i-1].label,gap:log[i].t-log[i-1].t>VH_GAP,roll:!!log[i].exp&&log[i].exp!==log[i-1].exp});
     return ch;
   }
   function vhHtml(){
     if(asset!=="ETH")return '<h3>Label history</h3><p class="vnote">The history is saved for ETH only (the phone-alert reading). Switch to ETH to see it.</p>';
     var head='<h3>When the label changed</h3>'+
+      '<div class="seg vhkseg" role="group" aria-label="Which expiries">'+VH_KINDS.map(function(q){return '<button type="button" data-vk="'+q[0]+'" aria-pressed="'+(q[0]===vhK)+'">'+q[1]+'</button>'}).join("")+'</div>'+
       '<div class="seg vhseg" role="group" aria-label="History range">'+VH_RANGES.map(function(r){return '<button type="button" data-vh="'+r[0]+'" aria-pressed="'+(r[0]===vhR)+'">'+r[1]+'</button>'}).join("")+'</div>';
-    var log=VH.log,step=vhStep(vhR),cs=VH.c[step];
+    var log=VH.log?vhView(VH.log,vhK):null,step=vhStep(vhR),cs=VH.c[step],kn=VH_KINDS.filter(function(q){return q[0]===vhK})[0][1];
     if(!log)return head+'<p class="vnote">'+(VH.err?'Could not load the saved readings. <button type="button" class="btn" id="vhretry">Try again</button>':'Loading the saved readings…')+'</p>';
-    if(!log.length)return head+'<p class="vnote">No readings saved yet. The alert job adds one about every 15 minutes.</p>';
+    if(!log.length)return head+'<p class="vnote">No '+kn+' readings saved yet. The alert job adds one about every 15 minutes.</p>';
     var now=Date.now(),t1=now,t0=vhR?now-vhR*864e5:Math.min(log[0].t-36e5,now-864e5);
     var k=cs?cs.k.filter(function(x){return x.t>=t0-step*1000&&x.t<=t1}):[];
     var line=k.length>1?k.map(function(x){return {t:Math.max(x.t,t0),p:x.c}}):log.filter(function(r){return r.t>=t0}).map(function(r){return {t:r.t,p:r.spot}});
@@ -882,8 +894,8 @@ h2{font-size:.98rem;line-height:1.3}
     h+='</svg>';
     var last=log[log.length-1];
     var out=head+'<div class="vchart vhchart">'+h+'</div>'+
-      '<p class="vlg"><span class="vhk vhBullish"></span>Bullish (dealers expected to buy) <span class="vhk vhBearish"></span>Bearish (expected to sell) · no colour = Neutral. ▲ / ▼ / ○ = the label changed there (your phone rang). Times UK.</p>'+
-      '<p class="vnote">Saved since '+ukTime(log[0].t)+' · '+f(log.length)+' readings · latest '+ukTime(last.t)+' ('+last.label+'). ETH, All expiries: the phone-alert reading, whatever expiry tab is chosen above. Price: Bitstamp ETH/USD. Nothing before '+ukTime(log[0].t,true)+': past option positions aren’t free to download.</p>';
+      '<p class="vlg"><span class="vhk vhBullish"></span>Bullish (dealers expected to buy) <span class="vhk vhBearish"></span>Bearish (expected to sell) · no colour = Neutral. ▲ / ▼ / ○ = the label changed there'+(vhK==="all"?' (your phone rang)':'')+'. Times UK.</p>'+
+      '<p class="vnote">'+kn+(vhK==="all"?': every expiry, the reading your phone alert follows.':': '+(vhK==="day"?"the next expiry":vhK==="week"?"the nearest Friday expiry":"the nearest end-of-month expiry")+' alone (now '+(last.exp?dname(Date.parse(last.exp+"T08:00:00Z")):"–")+'), same rules; saved in the background, no phone alert.')+' Saved since '+ukTime(log[0].t)+' · '+f(log.length)+' readings · latest '+ukTime(last.t)+' ('+last.label+'). ETH only; these tabs don’t follow the expiry tabs above. Price: Bitstamp ETH/USD. Nothing before '+ukTime(log[0].t,true)+': past option positions aren’t free to download.</p>';
     /* Changes table, newest first, with the price move after */
     if(!ch.length)out+='<p class="vnote">No label changes yet. Each change will show here with what price did 4 and 24 hours later.</p>';
     else{
@@ -896,9 +908,9 @@ h2{font-size:.98rem;line-height:1.3}
       };
       out+='<table class="vtbl vhtbl"><tr><th>Time (UK)</th><th>Change</th><th>Price</th><th>4h later</th><th>24h later</th></tr>'+
         ch.slice().reverse().slice(0,30).map(function(c){
-          return '<tr><td>'+ukTime(c.r.t)+'</td><td>'+c.from.slice(0,4)+' → <b class="'+c.r.label+'">'+c.r.label+'</b>'+(c.gap?' <span class="vhwait">(after a gap)</span>':'')+'</td><td>'+f(Math.round(c.r.spot))+'</td>'+after(c,4)+after(c,24)+'</tr>';
+          return '<tr><td>'+ukTime(c.r.t)+'</td><td>'+c.from.slice(0,4)+' → <b class="'+c.r.label+'">'+c.r.label+'</b>'+(c.gap?' <span class="vhwait">(after a gap)</span>':'')+(c.roll?' <span class="vhwait">(new expiry)</span>':'')+'</td><td>'+f(Math.round(c.r.spot))+'</td>'+after(c,4)+after(c,24)+'</tr>';
         }).join("")+'</table>'+
-        '<p class="vnote">Move after = price change since the label changed. Blue = price went the label’s way (up after Bullish, down after Bearish), pink = the other way; Neutral uncoloured. — = not that long ago yet.'+(ch.length>30?' Newest 30 of '+ch.length+' changes.':'')+'</p>';
+        '<p class="vnote">Move after = price change since the label changed. “New expiry” = the old one expired and the next took its place, so the change may be from that. Blue = price went the label’s way (up after Bullish, down after Bearish), pink = the other way; Neutral uncoloured. — = not that long ago yet.'+(ch.length>30?' Newest 30 of '+ch.length+' changes.':'')+'</p>';
     }
     return out;
   }
@@ -988,8 +1000,8 @@ h2{font-size:.98rem;line-height:1.3}
     if(asset==="ETH")vhLoad(false);
   }
   $("vc").addEventListener("click",function(e){
-    var v=e.target.closest("[data-vh],#vhretry");
-    if(v){if(v.id==="vhretry")vhLoad(true);else{vhR=+v.getAttribute("data-vh");$("vchist").innerHTML=vhHtml();vhLoad(false)}return}
+    var v=e.target.closest("[data-vh],[data-vk],#vhretry");
+    if(v){if(v.id==="vhretry")vhLoad(true);else{if(v.hasAttribute("data-vk"))vhK=v.getAttribute("data-vk");else vhR=+v.getAttribute("data-vh");$("vchist").innerHTML=vhHtml();vhLoad(false)}return}
     var t=e.target.closest("[data-iv],[data-k],#vcall,#vcretry");if(!t)return;
     if(t.id==="vcall")vcAll=!vcAll;
     else if(t.id==="vcretry"){vcLoad(asset,true);}
