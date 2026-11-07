@@ -862,7 +862,7 @@ h2{font-size:.98rem;line-height:1.3}
       '<li>24-hour flow for IV −3 / flat / +3 = −Vanna × IV points − Charm. Label from the flat case; Neutral when the three disagree, when Vanna and Charm cancel to within 10%, or under 0.01% of 24h turnover.</li>'+
       '<li>Strength: flow as a share of turnover (under 0.1% weak, 0.1–0.3% moderate, above 0.3% strong), one step up when net Gamma is negative and the label holds in all three scenarios.</li>'+
       '<li>Turnover: 24h quote volume of the '+a+' perpetual on the first two healthy of Binance, Bybit, Bitget, Gate, Deribit (data under 10 minutes old). DVOL: Deribit hourly index.</li>'+
-      '<li>The ETH phone alert uses exactly these rules on All expiries and rings once when the label changes.</li></ul></details>';
+      '<li>The ETH phone alert uses exactly these rules on All expiries and rings 2 times (a minute apart) when the label changes.</li></ul></details>';
     /* Detailed exposures & exact repricing */
     var ex=[-3,0,3].map(function(v){return exactFlow(b,v)});
     h+='<details><summary>Detailed exposures &amp; exact repricing</summary>'+
