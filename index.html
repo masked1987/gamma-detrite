@@ -421,6 +421,7 @@ h2{font-size:.98rem;line-height:1.3}
     Object.keys(S).forEach(function(a){
       var x=P?(fullOn()?viewFull(P[a],pick):view(P[a],wideOn(),pick)):fromSaved(base(a),pick);
       x.live=P?true:!!(SV.LV&&SV.LV[a]);x.src=P?"deribit":"saved";
+      if(P)x.zflip=zeroFlip(P[a],choose(P[a].exps,pick));
       x.row=x.m.map(function(r){return r.reduce(function(s,y){return s+y},0)});
       D[a]=x;
     });
@@ -468,7 +469,29 @@ h2{font-size:.98rem;line-height:1.3}
     for(var i=0;i<n-1;i++)if(p<k[i+1])return i;
     return n-1;
   }
+  /* Gamma flip (live data): the price where dealers' total gamma for the chosen expiries
+     changes sign if ETH moved there, every option recalculated at that price. Same method
+     as the Flow and Plan tabs (fragility shared/gamma.js gammaFlip) and the owner's ChatGPT
+     copy; found to the cent by halving the gap. Nearest crossing to spot within +-15%. */
+  function zeroFlip(R,exps){
+    var set={};exps.forEach(function(e){set[e]=1});
+    var os=(R.options||[]).filter(function(o){return set[o.expiry]}),Y=365*864e5;
+    if(!os.length)return null;
+    function tot(S){var t=0;for(var i=0;i<os.length;i++){var o=os[i];t+=gam(S,o.strike,o.iv,(o.expiry-R.now)/Y)*o.oi*S*S*0.01*o.sign}return t}
+    var lo=R.spot*0.85,n=120,st=R.spot*0.3/n,pS=lo,pv=tot(lo),best=null;
+    for(var i=1;i<=n;i++){
+      var S=lo+i*st,v=tot(S);
+      if((pv<0)!==(v<0)){
+        var a=pS,b=S,fa=pv;
+        for(var k=0;k<40;k++){var m=(a+b)/2,fm=tot(m);if((fm<0)===(fa<0)){a=m;fa=fm}else b=m}
+        var x=(a+b)/2;if(best===null||Math.abs(x-R.spot)<Math.abs(best-R.spot))best=x;
+      }
+      pS=S;pv=v;
+    }
+    return best;
+  }
   function flipOf(d){
+    if(d.zflip!==undefined)return d.zflip;
     var best=null,bd=1e15,g=d.row,k=d.strikes;
     for(var i=0;i<g.length-1;i++){
       if((g[i]<0&&g[i+1]>=0)||(g[i]>=0&&g[i+1]<0)){
@@ -566,7 +589,8 @@ h2{font-size:.98rem;line-height:1.3}
       ["Negative gamma total",sg(ns),"Added up across every strike in pink, "+ex+" only."],
       ["Strongest positive strike",f(d.strikes[bp]),c===1?"Longest blue bar.":"Darkest blue row once the chosen expiries are combined."],
       ["Strongest negative strike",f(d.strikes[bn]),c===1?"Longest pink bar.":"Darkest pink row once the chosen expiries are combined."],
-      ["Gamma flip",fl===null?"None":f(fl),fl===null?"No sign change in these strikes.":"Nearest strike area where gamma changes sign. Spot is "+(d.spot>fl?"above":"below")+" it."],
+      ["Gamma flip",fl===null?"None":f(Math.round(fl)),fl===null?(d.zflip!==undefined?"Total gamma keeps one sign within \u00b115% of the price.":"No sign change in these strikes."):
+        (d.zflip!==undefined?"The price where dealers\u2019 total gamma would change sign if "+asset+" moved there ("+u$(fl)+"). Spot is "+(d.spot>fl?"above":"below")+" it.":"Nearest strike area where gamma changes sign. Spot is "+(d.spot>fl?"above":"below")+" it.")],
       ["Put/call ratio",d.pc==null?"n/a":d.pc.toFixed(2),d.pc==null?"":(d.pc<1?"More call than put open interest":"More put than call open interest")+(P?", "+ex+".":", nearest expiries.")]
     ];
     $("stats").innerHTML=st.map(function(s){return '<div class="stat"><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd><p>'+s[2]+'</p></div>'}).join("");
@@ -729,10 +753,7 @@ h2{font-size:.98rem;line-height:1.3}
     var net=Object.keys(gk).reduce(function(s,k){return s+gk[k]},0),fd=VC[a],now=Date.now(),
         bk=fd&&fd.at?FlowContext.volumeSelection({asset:a,records:fd.records,health:fd.health},now):null,
         vol=bk?bk.volume:null,res=FlowContext.bias(book.total.vanna,book.total.charm,vol,net/1e6,false);
-    /* Gamma flip from the per-strike totals, to the cent */
-    var ks=Object.keys(gk).map(Number).sort(function(x,y){return x-y}),flip=null,bd=1e15;
-    for(var i=0;i<ks.length-1;i++){var g1=gk[ks[i]],g2=gk[ks[i+1]];
-      if((g1<0&&g2>=0)||(g1>=0&&g2<0)){var x=ks[i]+Math.abs(g1)/(Math.abs(g1)+Math.abs(g2))*(ks[i+1]-ks[i]);if(Math.abs(x-R.spot)<bd){bd=Math.abs(x-R.spot);flip=x}}}
+    var flip=D[a]&&D[a].zflip!==undefined?D[a].zflip:zeroFlip(R,exps);
     return {R:R,exps:exps,book:book,gk:gk,net:net,bk:bk,vol:vol,res:res,flip:flip,fd:fd};
   }
   /* Exact repricing: every option one day later at the new IV, price unchanged (options expiring within the day settle at today's forward) */
