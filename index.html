@@ -163,6 +163,58 @@ h2{font-size:.98rem;line-height:1.3}
   details[open]>p{animation:gd-open .22s cubic-bezier(.16,1,.3,1)}
   @keyframes gd-open{from{opacity:0;transform:translateY(-4px)}}
 }
+/* All expiries view: every strike and every chosen expiry, scrolls inside the box (headers stay). */
+.vmode{display:grid;grid-template-columns:1fr 1fr;width:calc(100% - 8px)}
+.vmode button{min-width:0}
+.fullmap{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin:0 4px;-webkit-overflow-scrolling:touch}
+.fullmap table{border-collapse:separate;border-spacing:0;font-size:9.5px;font-weight:600}
+.fullmap th,.fullmap td{height:18px;min-width:36px;padding:0 2px;text-align:center;white-space:nowrap}
+.fullmap thead th{position:sticky;top:0;z-index:2;background:var(--surface);color:var(--muted);font-weight:500;font-size:10.5px;height:24px;border-bottom:1px solid var(--line)}
+.fullmap tbody th{position:sticky;left:0;z-index:1;background:var(--surface);color:var(--muted);font-weight:500;font-size:10.5px;text-align:right;padding-right:6px;min-width:46px}
+.fullmap thead th:first-child{left:0;z-index:3}
+.fullmap td.cell{cursor:pointer;border:1px solid var(--surface)}
+.fullmap td.on{outline:2px solid var(--ink);outline-offset:-2px}
+.fullmap tr.sp>*{border-top:2px solid var(--ink)}
+.fullmap tr.fl>*{border-top:2px dashed var(--flip)}
+.fullmap tr.sp.fl>*{border-top:2px solid var(--ink)}
+.fullmap tr.spb>*{border-bottom:2px solid var(--ink)}
+/* Vanna & Charm view (same rules as the ETH phone alert). */
+#vc{padding:0 4px}
+#vc h3{font-size:1rem;margin:22px 0 4px;font-weight:650}
+.vmeta{margin:2px 0;color:var(--muted);font-size:.85rem}
+.vassume{margin:12px 0;padding:10px 12px;border-left:3px solid var(--flip);border-radius:6px;background:color-mix(in srgb,var(--ink) 6%,transparent);font-size:.9rem}
+.vctx{margin:12px 0;padding:14px;border-radius:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 16%,var(--surface)),color-mix(in srgb,var(--accent) 6%,var(--surface)));border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line))}
+.vctx .k2{font-size:.78rem;color:var(--muted)}
+.vctx .lbl{font-family:"Geist",sans-serif;font-weight:750;font-size:1.9rem;line-height:1.15;margin:2px 0 6px}
+.vctx .lbl.Bullish{color:var(--pos)}.vctx .lbl.Bearish{color:var(--neg)}
+.vctx p{margin:4px 0 0;font-size:.92rem}.vctx p.m{color:var(--muted);font-size:.85rem;margin-top:10px}
+.vtop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.pill{font-size:.74rem;white-space:nowrap;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--bg) 80%,transparent);border:1px solid var(--line)}
+.ivseg{display:grid;grid-template-columns:repeat(3,1fr);width:100%;margin:8px 0}
+.ivseg button{min-width:0}
+.vlg{font-size:.78rem;color:var(--muted);margin:2px 0 6px}
+.vchart{margin:6px 0 2px}
+.vchart svg{display:block;width:100%;height:auto;overflow:visible}
+.vchart .t{fill:var(--ink);font-size:11px;font-weight:650}
+.vchart .t2{fill:var(--muted);font-size:8.5px}
+.vchart .zero{stroke:var(--line);stroke-width:1}
+.vchart .band{fill:var(--ink);fill-opacity:.09}
+.vchart .hb{fill:transparent;cursor:pointer}
+.vbox{margin:10px 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ink) 6%,transparent);font-size:.9rem;line-height:1.6}
+.vtbl{width:100%;border-collapse:collapse;font-size:.88rem;margin:8px 0}
+.vtbl th{font-weight:500;color:var(--muted);text-align:right;padding:6px 4px;border-bottom:1px solid var(--line);font-size:.8rem}
+.vtbl th:first-child,.vtbl td:first-child{text-align:left}
+.vtbl td{padding:8px 4px;text-align:right;border-bottom:1px solid var(--line)}
+.vtbl tr.base td{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.vtbl .Bullish{color:var(--pos)}.vtbl .Bearish{color:var(--neg)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.tile{padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.tile .k2{font-size:.78rem;color:var(--muted)}
+.tile b{display:block;font-size:1.35rem;font-weight:750;margin:4px 0}
+.tile p{margin:0;font-size:.78rem;color:var(--muted)}
+#vc details p,#vc details li{font-size:.88rem}
+#vc details ul{margin:6px 0 0;padding-left:18px;color:var(--muted)}
+.vnote{font-size:.86rem;color:var(--muted);margin:8px 0}
 </style>
 </head>
 <body>
@@ -191,15 +243,21 @@ h2{font-size:.98rem;line-height:1.3}
 
   <section class="panel" style="margin-top:0" aria-labelledby="ct">
     <div class="ph"><h2 id="ct">ETH gamma heat map</h2><span class="unit">Each number is US$ thousands per 1% move</span></div>
-    <div class="seg rng" role="group" aria-label="Strike range">
+    <div class="seg rng vmode" role="group" aria-label="View">
       <button type="button" data-r="near" aria-pressed="true">Near</button>
       <button type="button" data-r="wide" aria-pressed="false">Wide &plusmn;25%</button>
+      <button type="button" data-r="full" aria-pressed="false">All expiries</button>
+      <button type="button" data-r="vc" aria-pressed="false">Vanna &amp; Charm</button>
     </div>
+    <p class="sub" id="fullnote" hidden></p>
     <div id="chart"></div>
+    <div id="gmx">
     <div class="ramp"><span>Negative</span><i class="rampbar"></i><span>Positive</span></div>
     <div class="legend"><span><i class="sw"></i>Spot price</span><span><i class="sw f"></i>Gamma flip</span><span>Darker means stronger</span></div>
     <p id="read" role="status">Tap a cell to see its gamma.</p>
     <p class="sub" style="margin:8px 4px 0">Each number is the gamma for one strike (row) and one expiry date (column): roughly how many thousand US dollars of the coin dealers would need to buy or sell if price moved 1%. Blue means they would sell rallies and buy dips, which calms price. Pink means they would do the opposite, which speeds price up. Darker means a bigger number.</p>
+    </div>
+    <div id="vc" hidden></div>
   </section>
 
   <section aria-labelledby="kr">
@@ -220,6 +278,8 @@ h2{font-size:.98rem;line-height:1.3}
 <footer>Gamma Detrite is independent and is not affiliated with Deribit. Figures are estimates built from public options data, or clearly labelled samples. Nothing here is financial advice.</footer>
 </div>
 
+<script src="vanna-charm.js"></script>
+<script src="vc-flow.js"></script>
 <script>
 (function(){
   /* LIVE: replace null with the JSON made by gamma_refresh.py to show real data */
@@ -288,18 +348,21 @@ h2{font-size:.98rem;line-height:1.3}
   function inTime(e){var h=(e-Date.now())/36e5;return h<1?"within the hour":h<48?"in "+Math.round(h)+" h":"in "+Math.round(h/24)+" days"}
   /* One pass over the Deribit chain: gamma per strike and expiry, plus open contracts per expiry */
   function parse(rows,spot,now){
-    var cell={},eset={},po={},co={};
+    var cell={},eset={},po={},co={},options=[];
     rows.forEach(function(s){
       var p=NAME.exec(s.instrument_name||""),mo=p?MON.indexOf(p[2]):-1;
       if(mo<0)return;
       var e=Date.UTC(2000+ +p[3],mo,+p[1],8),K=parseFloat(p[4].replace("d",".")),
           oi=s.open_interest||0,iv=(s.mark_iv||0)/100,F=s.underlying_price||spot,T=(e-now)/(365*864e5);
-      if(oi<=0||iv<=0||T<=0)return;
+      if(![spot,K,oi,iv,F,T].every(function(v){return isFinite(v)&&v>0}))return;
       var g=gam(F,K,iv,T)*oi*spot*spot*0.01;
+      if(!isFinite(g))return;
+      /* Kept for the Vanna & Charm view (vanna-charm.js); same as the ETH phone alert's copy */
+      options.push({expiry:e,strike:K,oi:oi,iv:iv,forward:F,sign:p[5]==="C"?1:-1});
       if(p[5]==="C")co[e]=(co[e]||0)+oi;else{po[e]=(po[e]||0)+oi;g=-g}
       cell[K+"|"+e]=(cell[K+"|"+e]||0)+g;eset[e]=1;
     });
-    return {spot:spot,now:now,cell:cell,po:po,co:co,exps:Object.keys(eset).map(Number).sort(function(a,b){return a-b})};
+    return {spot:spot,now:now,cell:cell,po:po,co:co,options:options,exps:Object.keys(eset).map(Number).sort(function(a,b){return a-b})};
   }
   /* Heat map for the chosen expiries. With more than MAXCOL, the last column adds up the later ones. */
   function view(P,wide,p){
@@ -325,6 +388,19 @@ h2{font-size:.98rem;line-height:1.3}
       dates:cols.concat(rest.length?[rest[0]]:[]),later:rest.length,count:chosen.length,
       m:ks.map(function(k){return js.map(function(j){return Math.round((cell[k+"|"+j]||0)/100)/1e4})})};
   }
+  /* All expiries view: every strike and every chosen expiry, no "later" column (scrolls inside its box) */
+  function viewFull(P,p){
+    var chosen=choose(P.exps,p),col={},kset={},cell={},po=0,co=0,today=Math.floor(P.now/864e5);
+    chosen.forEach(function(e,i){col[e]=i;po+=P.po[e]||0;co+=P.co[e]||0});
+    Object.keys(P.cell).forEach(function(key){
+      var q=key.split("|"),e=+q[1],K=+q[0];if(!(e in col))return;
+      kset[K]=1;var ck=K+"|"+col[e];cell[ck]=(cell[ck]||0)+P.cell[key];
+    });
+    var ks=Object.keys(kset).map(Number).sort(function(a,b){return a-b});
+    return {spot:Math.round(P.spot*100)/100,asof:stamp(P.now),pc:co?Math.round(po/co*100)/100:null,strikes:ks,full:true,
+      exps:chosen.map(function(e){return (Math.floor(e/864e5)-today)+"d"}),dates:chosen,later:0,count:chosen.length,
+      m:ks.map(function(k){return chosen.map(function(e,j){return Math.round((cell[k+"|"+j]||0)/100)/1e4})})};
+  }
   /* Saved snapshot (or sample): expiry dates come from its "Nd" labels; only its columns can be chosen */
   function savedDates(L){var t=Date.parse(L.asof.replace(" UTC","Z").replace(" ","T")),d0=Math.floor(t/864e5)*864e5;
     return L.exps.map(function(x){return d0+parseInt(x,10)*864e5+8*36e5})}
@@ -334,13 +410,16 @@ h2{font-size:.98rem;line-height:1.3}
       m:L.m.map(function(r){return ix.map(function(i){return r[i]})})};
   }
   var P=null,SV={LV:LIVE,src:"saved"},range="near";
-  try{if(localStorage.getItem("gd.range")==="wide")range="wide"}catch(e){}
+  try{var rg=localStorage.getItem("gd.range");if(rg==="wide"||rg==="full"||rg==="vc")range=rg}catch(e){}
+  /* View: Near / Wide ±25% heat map, All expiries (every strike and date), or Vanna & Charm. The last three need live data. */
   function wideOn(){return range==="wide"&&!!P}
+  function fullOn(){return range==="full"&&!!P}
+  function vcOn(){return range==="vc"&&!!P}
   function base(a){return SV.LV&&SV.LV[a]?SV.LV[a]:sample(S[a])}
   function expList(a){return P?P[a].exps:savedDates(base(a))}
   function apply(){
     Object.keys(S).forEach(function(a){
-      var x=P?view(P[a],wideOn(),pick):fromSaved(base(a),pick);
+      var x=P?(fullOn()?viewFull(P[a],pick):view(P[a],wideOn(),pick)):fromSaved(base(a),pick);
       x.live=P?true:!!(SV.LV&&SV.LV[a]);x.src=P?"deribit":"saved";
       x.row=x.m.map(function(r){return r.reduce(function(s,y){return s+y},0)});
       D[a]=x;
@@ -425,9 +504,15 @@ h2{font-size:.98rem;line-height:1.3}
   function draw(){
     var d=D[asset],m=d.m,n=m.length,c=d.exps.length,rh=20,top=26,lx=50,cw=c?Math.floor(304/c):304,H=top+n*rh+6;
     tabs();
-    $("ct").textContent=asset+(c===1?" gamma by strike":" gamma heat map");
+    var vc=vcOn();
+    $("ct").textContent=vc?asset+" Vanna & Charm":asset+(c===1?" gamma by strike":" gamma heat map");
+    document.querySelector(".ph .unit").hidden=vc;
+    $("chart").hidden=vc;$("gmx").hidden=vc;$("vc").hidden=!vc;
+    $("fullnote").hidden=!fullOn();
+    if(fullOn())$("fullnote").textContent="Full range \u00b7 "+n+" strikes \u00b7 "+c+" expir"+(c===1?"y":"ies")+". Scroll inside the chart to see all levels and dates.";
+    if(vc)drawVC();
     $("kr").textContent="Key readings \u00b7 "+pname(pick)+(ONE.indexOf(pick)>=0&&d.count?" "+dname(d.dates[0]).slice(4):"");
-    var on=wideOn()?"wide":"near";
+    var on=vcOn()?"vc":fullOn()?"full":wideOn()?"wide":"near";
     Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(x){x.setAttribute("aria-pressed",x.getAttribute("data-r")===on?"true":"false")});
     $("badge").textContent=!d.live?"Sample data":d.src==="deribit"?"Live "+d.asof:"Snapshot "+d.asof+" · "+ago(d.asof);
     if(!c||!n){
@@ -436,6 +521,7 @@ h2{font-size:.98rem;line-height:1.3}
     }
     var max=0;m.forEach(function(r){r.forEach(function(v){max=Math.max(max,Math.abs(v))})});
     if(!max)max=1;
+    if(d.full){drawFull(d,max);stats(d);return}
     var h='<svg viewBox="0 0 360 '+H+'" role="group" aria-label="Gamma '+(c===1?"by strike for one expiry":"heat map by strike and expiry")+'">';
     if(c===1)h+='<text class="k" x="'+(lx+152)+'" y="16" text-anchor="middle">'+dname(d.dates[0])+' · '+d.exps[0]+'</text>';
     else d.exps.forEach(function(e,j){h+='<text class="k" x="'+(lx+j*cw+cw/2)+'" y="16" text-anchor="middle">'+(c<=3&&e!=="later"?dname(d.dates[j]).slice(4)+" \u00b7 "+e:e)+'</text>'});
@@ -467,6 +553,10 @@ h2{font-size:.98rem;line-height:1.3}
     if(fl!==null)h+='<line class="flip" x1="'+(lx-4)+'" x2="'+xe+'" y1="'+yAt(fl)+'" y2="'+yAt(fl)+'"/>';
     if(sel){h+='<rect class="cellsel" x="'+(lx+sel[1]*cw)+'" y="'+(top+(n-1-sel[0])*rh)+'" width="'+cw+'" height="'+rh+'"/>'}
     $("chart").innerHTML=h+'</svg>';
+    stats(d);
+  }
+  function stats(d){
+    var m=d.m,c=d.exps.length,fl=flipOf(d);
     var tot=d.row.reduce(function(a,b){return a+b},0),ps=0,ns=0,bp=0,bn=0,ex=c===1?"this expiry":"the chosen expiries";
     d.row.forEach(function(v,i){if(v>d.row[bp])bp=i;if(v<d.row[bn])bn=i});
     m.forEach(function(r){r.forEach(function(v){if(v>0)ps+=v;else ns+=v})});
@@ -481,10 +571,34 @@ h2{font-size:.98rem;line-height:1.3}
     ];
     $("stats").innerHTML=st.map(function(s){return '<div class="stat"><dt>'+s[0]+'</dt><dd>'+s[1]+'</dd><p>'+s[2]+'</p></div>'}).join("");
   }
+  /* All expiries: an HTML table so the strike column and the date row stay put while scrolling */
+  function drawFull(d,max){
+    var box=document.querySelector(".fullmap"),sx=box?box.scrollLeft:0,sy=box?box.scrollTop:null;
+    var n=d.strikes.length,g=gapOf(d,d.spot),fl=flipOf(d),gf=fl===null?-9:gapOf(d,fl),
+        h='<div class="fullmap" role="group" aria-label="Gamma for every strike and expiry"><table><thead><tr><th scope="col"></th>';
+    d.exps.forEach(function(e,j){h+='<th scope="col">'+e+'</th>'});
+    h+='</tr></thead><tbody>';
+    var spotRow=-1;
+    for(var i=n-1;i>=0;i--){
+      var cls=(i===g&&g<n-1?" sp":"")+(i===gf&&gf<n-1?" fl":"")+(i===0&&g<0?" spb":"");
+      if(i===g)spotRow=n-1-i;
+      h+='<tr class="'+cls.trim()+'"><th scope="row">'+f(d.strikes[i])+'</th>';
+      for(var j=0;j<d.exps.length;j++){
+        var v=d.m[i][j];
+        if(Math.abs(v)<0.005){h+='<td></td>';continue}
+        var o=0.1+0.9*Math.pow(Math.abs(v)/max,0.7),on=sel&&sel[0]===i&&sel[1]===j;
+        h+='<td class="cell'+(on?' on':'')+'" data-i="'+i+'" data-j="'+j+'" tabindex="0" role="button" aria-label="Strike '+f(d.strikes[i])+', expiry '+d.exps[j]+', gamma '+sg(v)+'" style="background:color-mix(in srgb,var('+(v<0?'--neg':'--pos')+') '+Math.round(o*100)+'%,transparent);color:'+(o>0.5?'var(--bg)':'var(--ink)')+'">'+cl(v)+'</td>';
+      }
+      h+='</tr>';
+    }
+    $("chart").innerHTML=h+'</tbody></table></div>';
+    box=document.querySelector(".fullmap");
+    if(sy===null){box.scrollTop=Math.max(0,(spotRow<0?0:spotRow)*18-box.clientHeight/2+24)}else{box.scrollTop=sy;box.scrollLeft=sx}
+  }
   function pick1(i,j){
     sel=[i,j];readout(i,j);
     draw();
-    var r=document.querySelector('.cell[data-i="'+i+'"][data-j="'+j+'"]');if(r)r.focus();
+    var r=document.querySelector('.cell[data-i="'+i+'"][data-j="'+j+'"]');if(r)r.focus({preventScroll:true});
   }
   function readout(i,j){
     var d=D[asset],v=d.m[i][j],ex=d.exps.length===1?dname(d.dates[0])+" expiry":d.exps[j]==="later"?"later expiries added together":d.exps[j]+" expiry";
@@ -500,7 +614,8 @@ h2{font-size:.98rem;line-height:1.3}
     if(p==="all")on=[];else if(on.indexOf(p)>=0)on.splice(on.indexOf(p),1);else on.push(p);
     var nx=norm(on);
     if(nx===pick)return;
-    pick=nx;
+    pick=nx;vcK=null;
+    if(fullOn())$("chart").innerHTML="";
     apply();clear();draw();
   }
   Array.prototype.forEach.call(document.querySelectorAll(".xt button"),function(b){
@@ -509,16 +624,20 @@ h2{font-size:.98rem;line-height:1.3}
   Array.prototype.forEach.call(document.querySelectorAll(".rng button"),function(b){
     b.addEventListener("click",function(){
       var r=b.getAttribute("data-r");
-      if(r==="wide"&&!P){$("read").textContent="The wide view needs live data from Deribit. Tap Refresh now to try again.";return}
-      range=r;try{localStorage.setItem("gd.range",r)}catch(e){}
+      if(r!=="near"&&!P){$("read").textContent="This view needs live data from Deribit. Tap Refresh now to try again.";return}
+      var was=range;range=r;try{localStorage.setItem("gd.range",r)}catch(e){}
+      if(r==="full"&&was!=="full")document.querySelector(".fullmap")&&($("chart").innerHTML="");
       apply();clear();draw();
+      if(r==="vc")vcLoad(asset,false);
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-a]"),function(b){
     b.addEventListener("click",function(){
-      asset=b.getAttribute("data-a");
+      asset=b.getAttribute("data-a");vcK=null;
       Array.prototype.forEach.call(document.querySelectorAll(".seg button[data-a]"),function(x){x.setAttribute("aria-pressed",x===b?"true":"false")});
+      if(fullOn())$("chart").innerHTML="";
       clear();draw();
+      if(vcOn())vcLoad(asset,false);
     });
   });
   var URLS=["https://raw.githubusercontent.com/masked1987/gamma-detrite/main/gamma-data.json","gamma-data.json"];
@@ -542,6 +661,7 @@ h2{font-size:.98rem;line-height:1.3}
     fromDeribit().then(function(r){
       P=r;refresh();
       $("ldmsg").textContent="Live from Deribit as of "+D.BTC.asof.slice(11)+". Updates every 5 minutes while this page is open.";
+      if(range==="vc")vcLoad(asset,true);
     }).catch(function(){
       return tryUrl(0).then(function(LV){
         if(LV.BTC.asof>SV.LV.BTC.asof)SV={LV:LV,src:"saved"};
@@ -554,6 +674,198 @@ h2{font-size:.98rem;line-height:1.3}
       $("ldmsg").textContent="Could not load any data just now. Showing the snapshot from "+D.BTC.asof+" ("+ago(D.BTC.asof)+").";
     });
   }
+  /* ===== Vanna & Charm view (Nov 2026, from the owner's ChatGPT copy of this page) =====
+     Rules in vanna-charm.js + vc-flow.js, the same code as the ETH phone alert (fragility
+     jobs/vanna-flow.mjs). Dealers assumed long calls, short puts. Uses the chosen expiries. */
+  var VC={},vcIv=-3,vcAll=false,vcK=null,DAYMS=864e5;
+  function getJ(u){
+    var o={cache:"no-store"};if(window.AbortSignal&&AbortSignal.timeout)o.signal=AbortSignal.timeout(15000);
+    return fetch(u,o).then(function(r){if(!r.ok)throw Error("HTTP "+r.status);return r.json()}).then(function(j){if(j&&j.error)throw Error("exchange error");return j});
+  }
+  function settle(ps){return Promise.all(ps.map(function(p){return p.then(function(v){return {ok:true,v:v}},function(e){return {ok:false,e:e}})}))}
+  /* Turnover feeds (first two healthy of Binance, Bybit, Bitget, Gate, Deribit) and DVOL hourly candles */
+  function vcLoad(a,force){
+    var old=VC[a];
+    if(!force&&old&&(Date.now()-old.at<300000||old.busy))return;
+    if(old)old.busy=true;else VC[a]={busy:true,at:0,records:{},health:{},status:[]};
+    var now0=Date.now(),dv="https://www.deribit.com/api/v2/public/get_volatility_index_data?currency="+a+"&start_timestamp="+(now0-30*36e5)+"&end_timestamp="+now0+"&resolution=3600";
+    settle(FlowContext.feedUrls(a).map(getJ).concat([getJ(dv)])).then(function(rs){
+      var now=Date.now(),prev=VC[a]||{},recs={},health={},status=[];
+      FlowContext.venues.forEach(function(v,i){
+        var r=rs[i],x=r.ok?FlowContext.volumeRecord(v,r.v,a,now):null;
+        if(x){recs[v]=x;status.push({v:v,ok:true,x:x})}
+        else{
+          var keep=prev.records&&prev.records[v];
+          /* A value from an earlier answer still counts while fresh, after the venues that answered now */
+          if(keep&&FlowContext.fresh(keep.at,now)&&FlowContext.fresh(keep.receivedAt,now)){recs[v]=keep;health[v]=true}
+          status.push({v:v,ok:false,why:r.ok?"answered, but the number was stale or not usable":(r.e&&r.e.message==="Failed to fetch"?"blocked or no answer":(r.e&&r.e.message)||"no answer"),kept:!!health[v]});
+        }
+      });
+      var dvol=null,last=rs[rs.length-1];
+      if(last.ok&&last.v.result&&Array.isArray(last.v.result.data)){
+        var done=last.v.result.data.filter(function(c){return c[0]+36e5<=now}).sort(function(x,y){return x[0]-y[0]});
+        if(done.length){
+          var L=done[done.length-1],at=function(h){var t=L[0]-h*36e5;for(var i=done.length-1;i>=0;i--)if(done[i][0]<=t)return done[i];return null},d24=at(24),d4=at(4);
+          dvol={v:L[4],t:L[0],ch24:d24?L[4]-d24[4]:null,ch4:d4?L[4]-d4[4]:null};
+        }
+      }
+      VC[a]={at:now,records:recs,health:health,status:status,dvol:dvol,busy:false};
+      if(a===asset&&vcOn())draw();
+    });
+  }
+  function m$(x,d){
+    var a=Math.abs(x),s=x>0?"+":x<0?"−":"";d=d==null?2:d;
+    if(a<0.5)return "$0";
+    return s+"$"+(a>=1e9?(a/1e9).toFixed(d)+"B":a>=1e6?(a/1e6).toFixed(d)+"M":a>=1e3?(a/1e3).toFixed(d)+"K":a.toFixed(0));
+  }
+  function u$(x){return "$"+x.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+  function sec(t){var d=new Date(t);return stamp(t).replace(" UTC",":"+pad(d.getUTCSeconds())+" UTC")}
+  /* Everything the view needs for the chosen expiries */
+  function vcCalc(a){
+    var R=P[a],exps=choose(R.exps,pick),book=exps.length?GreekAnalytics.prepare(R,exps):null;
+    if(!book)return null;
+    var set={},gk={};exps.forEach(function(e){set[e]=1});
+    Object.keys(R.cell).forEach(function(k){var q=k.split("|");if(set[q[1]])gk[q[0]]=(gk[q[0]]||0)+R.cell[k]});
+    var net=Object.keys(gk).reduce(function(s,k){return s+gk[k]},0),fd=VC[a],now=Date.now(),
+        bk=fd&&fd.at?FlowContext.volumeSelection({asset:a,records:fd.records,health:fd.health},now):null,
+        vol=bk?bk.volume:null,res=FlowContext.bias(book.total.vanna,book.total.charm,vol,net/1e6,false);
+    /* Gamma flip from the per-strike totals, to the cent */
+    var ks=Object.keys(gk).map(Number).sort(function(x,y){return x-y}),flip=null,bd=1e15;
+    for(var i=0;i<ks.length-1;i++){var g1=gk[ks[i]],g2=gk[ks[i+1]];
+      if((g1<0&&g2>=0)||(g1>=0&&g2<0)){var x=ks[i]+Math.abs(g1)/(Math.abs(g1)+Math.abs(g2))*(ks[i+1]-ks[i]);if(Math.abs(x-R.spot)<bd){bd=Math.abs(x-R.spot);flip=x}}}
+    return {R:R,exps:exps,book:book,gk:gk,net:net,bk:bk,vol:vol,res:res,flip:flip,fd:fd};
+  }
+  /* Exact repricing: every option one day later at the new IV, price unchanged (options expiring within the day settle at today's forward) */
+  function exactFlow(book,iv){
+    var later=book.now+DAYMS,tot=0;
+    book.records.forEach(function(r){
+      var o=r.option,d1;
+      if(o.expiry<=later)d1=o.sign===1?(o.forward>o.strike?1:0):(o.forward<o.strike?-1:0);
+      else{var g=GreekAnalytics.greeks({expiry:o.expiry,strike:o.strike,oi:o.oi,iv:Math.max(0.01,o.iv+iv/100),forward:o.forward,sign:o.sign},book.spot,later);if(!g)return;d1=g.delta}
+      tot+=-(d1-r.g.delta)*o.sign*o.oi*book.spot;
+    });
+    return tot;
+  }
+  function labelOf(total,v,c,thr){
+    var gross=Math.abs(v)+Math.abs(c),cancel=gross>0&&Math.abs(total)<=.1*gross,tiny=Math.abs(total)<1||(thr!==null&&Math.abs(total)<thr);
+    return thr===null?"Unavailable":tiny||cancel?"Neutral":total>0?"Bullish":"Bearish";
+  }
+  /* One bar panel: values per strike, equally spaced; spot solid, flip dashed, chosen strike shaded */
+  function bars(title,sub,ks,vals,spot,flip,K,kind){
+    var W=360,H=184,L=58,Rr=352,top=34,bot=154,mid=(top+bot)/2,n=ks.length,st=(Rr-L)/n,
+        mx=0;vals.forEach(function(v){mx=Math.max(mx,Math.abs(v))});
+    var flat=!mx;if(flat)mx=1;
+    function xAt(p){if(p<=ks[0])return L+st/2;if(p>=ks[n-1])return L+(n-.5)*st;for(var i=0;i<n-1;i++)if(p<ks[i+1])return L+(i+.5+(p-ks[i])/(ks[i+1]-ks[i]))*st}
+    var h='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+title+' by strike">'+
+      '<text class="t" x="'+(W/2)+'" y="12" text-anchor="middle">'+title+'</text><text class="t2" x="'+(W/2)+'" y="24" text-anchor="middle">'+sub+'</text>';
+    var si=ks.indexOf(K);if(si>=0)h+='<rect class="band" x="'+(L+si*st)+'" y="'+top+'" width="'+st+'" height="'+(bot-top)+'"/>';
+    h+='<line class="zero" x1="'+L+'" x2="'+Rr+'" y1="'+mid+'" y2="'+mid+'"/>';
+    [[mx,top+3],[0,mid+3],[-mx,bot+3]].forEach(function(y){h+='<text class="k" x="'+(L-4)+'" y="'+y[1]+'" text-anchor="end">'+(flat?(y[0]>0?"+$1":y[0]<0?"−$1":"$0"):m$(y[0]))+'</text>'});
+    var bw=Math.max(2,Math.min(14,st*.62));
+    vals.forEach(function(v,i){
+      var len=Math.abs(v)/mx*(bot-top)/2,x=L+(i+.5)*st-bw/2,cls=v>=0?"pos":"neg";
+      h+='<rect class="'+cls+'" x="'+x.toFixed(1)+'" y="'+(v>=0?mid-Math.max(len,.8):mid).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(len,.8).toFixed(1)+'" rx="1.5"/>';
+    });
+    if(flip!==null&&flip>=ks[0]&&flip<=ks[n-1])h+='<line class="flip" x1="'+xAt(flip).toFixed(1)+'" x2="'+xAt(flip).toFixed(1)+'" y1="'+(top-2)+'" y2="'+(bot+2)+'"/>';
+    if(spot>=ks[0]&&spot<=ks[n-1])h+='<line class="spot" x1="'+xAt(spot).toFixed(1)+'" x2="'+xAt(spot).toFixed(1)+'" y1="'+(top-2)+'" y2="'+(bot+2)+'"/>';
+    var lab=[0,Math.round((n-1)/3),Math.round(2*(n-1)/3),n-1].filter(function(v,i,a){return a.indexOf(v)===i});
+    lab.forEach(function(i){h+='<text class="k" x="'+(L+(i+.5)*st).toFixed(1)+'" y="'+(bot+14)+'" text-anchor="middle">'+f(ks[i])+'</text>'});
+    ks.forEach(function(k,i){h+='<rect class="hb" data-k="'+k+'" x="'+(L+i*st).toFixed(1)+'" y="'+top+'" width="'+st.toFixed(1)+'" height="'+(bot-top)+'" tabindex="0" role="button" aria-label="Strike '+f(k)+'"/>'});
+    return '<div class="vchart">'+h+'</svg></div>';
+  }
+  function drawVC(){
+    var el=$("vc"),a=asset,c=vcCalc(a);
+    if(!c){el.innerHTML='<p class="vnote">No options to read for '+pname(pick).toLowerCase()+' expiries right now. Pick another tab.</p>';return}
+    var b=c.book,res=c.res,fd=c.fd,bk=c.bk,R=c.R,lbl=res.label,flat=res.rows[1],ivs={"-3":"IV falls 3 points","0":"IV unchanged","3":"IV rises 3 points"};
+    var str=lbl==="Neutral"||lbl==="Unavailable"?null:["Weak","Moderate","Strong"][res.adjusted],
+        pill=lbl==="Unavailable"?(fd&&fd.busy?"Loading":"No turnover"):!res.robust?"IV-dependent":str||(res.rows[1].cancel?"Cancels out":"Small");
+    var why=lbl==="Unavailable"?(fd&&fd.busy&&!fd.at?"Loading the 24-hour turnover feeds…":"Needs 24-hour turnover from two exchanges; fewer answered. Tap Retry data feeds."):
+      !res.robust?"The volatility scenarios disagree. Treat the overall bias as Neutral.":
+      lbl==="Neutral"?(res.rows[1].cancel?"Vanna and Charm cancel out, so the flow is Neutral.":"The estimated flow is inside the neutral band (under 0.01% of 24-hour turnover)."):
+      "All three volatility scenarios point to dealer "+(lbl==="Bullish"?"buying":"selling")+" over the next 24 hours ("+m$(flat.total)+" with IV flat). "+str+" context.";
+    var h='<p class="vmeta">Fetched '+sec(R.now)+' · '+ago(stamp(R.now))+'</p>'+
+      '<p class="vmeta">'+a+' · Spot '+u$(R.spot)+' · '+pname(pick)+' · '+b.records.length+' option series · '+b.expiries.length+' expir'+(b.expiries.length===1?"y":"ies")+'. All valid strikes count in totals.'+(b.excluded?' '+b.excluded+' without a usable price left out.':'')+'</p>'+
+      '<div class="vassume"><b>Position assumption:</b> dealers long calls and short puts, weighted by reported open interest. Actual dealer inventory is unknown. Positive exposure means delta increases; the hedge change has the opposite sign.</div>'+
+      '<div class="vctx"><div class="vtop"><span class="k2">24-hour flow context · '+a+'</span><span class="pill">'+pill+'</span></div>'+
+        '<div class="lbl '+lbl+'">'+lbl+'</div><p>'+why+'</p>'+
+        '<p class="m">Background context for your Gamma setup. Assumes dealers long calls and short puts; inventory is unknown.</p></div>';
+    /* Charts */
+    var all=b.strikes.map(function(r){return r.key}),ks=vcAll?all:all.slice().sort(function(x,y){return Math.abs(x-R.spot)-Math.abs(y-R.spot)}).slice(0,11).sort(function(x,y){return x-y});
+    if(vcK===null||ks.indexOf(vcK)<0)vcK=ks.slice().sort(function(x,y){return Math.abs(x-R.spot)-Math.abs(y-R.spot)})[0];
+    var byK={};b.strikes.forEach(function(r){byK[r.key]=r});
+    var vv=ks.map(function(k){return -byK[k].vanna*vcIv}),cv=ks.map(function(k){return -byK[k].charm}),gv=ks.map(function(k){return c.gk[k]||0});
+    h+='<h3>Vanna + Charm above Gamma</h3><p class="vnote" style="margin-top:0">Same strikes, same expiries, same snapshot. Tap a bar to compare one strike. Each panel has its own dollar scale.</p>'+
+      '<div class="seg ivseg" role="group" aria-label="Implied volatility scenario">'+[-3,0,3].map(function(v){return '<button type="button" data-iv="'+v+'" aria-pressed="'+(v===vcIv)+'">IV '+(v<0?"−3":v>0?"+3":"flat")+'</button>'}).join("")+'</div>'+
+      '<p class="vlg">Top two: blue = estimated buying, pink = estimated selling. Gamma: blue = dampening, pink = amplification.</p>'+
+      bars("Vanna · "+ivs[String(vcIv)],"Approximate hedge change · USD",ks,vv,R.spot,c.flip,vcK)+
+      bars("Charm · one day passes","Instantaneous daily rate × 1 day · approximation",ks,cv,R.spot,c.flip,vcK)+
+      bars("Gamma levels · selected expiries","USD per 1% price move · notional",ks,gv,R.spot,c.flip,vcK)+
+      '<p class="vnote">Solid: spot '+u$(R.spot)+(c.flip!==null?'   Dashed: Gamma flip '+u$(c.flip):'')+'</p>'+
+      '<p class="vnote">Strike prices (USD), equally spaced. '+(vcAll?"All strikes shown.":"Nearest "+ks.length+" strikes shown.")+' All strikes count in the totals.</p>'+
+      '<button type="button" class="btn" id="vcall">'+(vcAll?"Show nearest strikes":"Show all strikes")+'</button>';
+    var sk=byK[vcK];
+    h+='<div class="vbox"><b>Strike '+u$(vcK).replace(".00","")+'</b><br>Vanna flow '+m$(-sk.vanna*vcIv)+(vcIv?'':' (IV flat)')+'<br>Charm flow '+m$(-sk.charm)+'<br>Gamma '+m$(c.gk[vcK]||0)+'</div>';
+    /* What if volatility changes? */
+    var rowN={"-3":"Down 3 points","0":"Flat · base case","3":"Up 3 points"};
+    h+='<h3>What if volatility changes?</h3><p class="vnote" style="margin-top:0">Your three paths for the next 24 hours. Flat IV anchors the label; disagreement makes the overall reading Neutral. Linear approximation at unchanged price.</p>'+
+      '<table class="vtbl"><tr><th>IV path</th><th>Vanna flow</th><th>Charm flow</th><th>Total</th></tr>'+
+      res.rows.map(function(r){return '<tr'+(r.iv===0?' class="base"':'')+'><td><b>'+rowN[String(r.iv)]+'</b></td><td>'+m$(r.vanna)+'</td><td>'+m$(r.charm)+'</td><td class="'+(res.threshold===null?"":r.label)+'"><b>'+m$(r.total)+'</b></td></tr>'}).join("")+'</table>'+
+      '<p class="vnote">Vanna flow = −Vanna × IV points. Charm flow = −daily Charm. Large near-expiry rates may overstate a full-day move; compare the exact repricing scenarios below.</p>';
+    /* How strong is the context? */
+    var gadj=c.net<0?"Negative net Gamma: amplification."+(lbl!=="Neutral"&&lbl!=="Unavailable"&&res.robust?" Strength one step up.":" No label to strengthen."):"Positive net Gamma: dampening. No strength increase.";
+    var dv=fd&&fd.dvol,vn=bk&&bk.used.length?bk.used.map(function(r){return r.venue}).join(" + "):"Exchange";
+    h+='<h3>How strong is the context?</h3><div class="tiles">'+
+      '<div class="tile"><span class="k2">Raw flow / 24h turnover</span><b>'+(res.pct===null?"–":res.pct.toFixed(2)+"%")+'</b><p>'+(res.base===null?"Waiting for turnover":["Weak","Moderate","Strong"][res.base]+" · flat IV.")+'</p></div>'+
+      '<div class="tile"><span class="k2">Gamma-adjusted context</span><b>'+(str||lbl)+'</b><p>'+gadj+'</p></div>'+
+      '<div class="tile"><span class="k2">'+a+' DVOL</span><b>'+(dv?dv.v.toFixed(1):"–")+'</b><p>'+(dv?"Last completed hourly candle · "+new Date(dv.t+36e5).toISOString().slice(11,16)+" UTC."+(dv.ch24!==null?" 24h change: "+(dv.ch24>=0?"+":"−")+Math.abs(dv.ch24).toFixed(2)+" points.":""):"Not loaded")+'</p></div>'+
+      '<div class="tile"><span class="k2">'+vn+' turnover</span><b>'+(c.vol?m$(c.vol).replace("+",""):"–")+'</b><p>'+a+' perpetuals · rolling 24h · USDT ≈ USD. Selected venues only; not total market volume.'+(bk&&bk.fallback?" Backup venues (Binance / Bybit did not answer).":"")+'</p></div></div>'+
+      '<button type="button" class="btn" id="vcretry">Retry data feeds</button>'+
+      '<p class="vnote">Updates every 5 minutes while open. Priority: Binance, Bybit, Bitget, Gate, then Deribit; two healthy venues are selected.</p>';
+    h+='<details><summary>Exchange status and timestamps</summary><ul>'+(fd&&fd.status.length?fd.status.map(function(s){
+      return '<li><b>'+s.v+'</b>: '+(s.ok?m$(s.x.amount).replace("+","")+" "+s.x.unit+", "+sec(s.x.at)+(s.x.clock==="retrieved"?" (time received)":"")+(bk&&bk.used.some(function(u){return u.venue===s.v})?" · used":""):s.why+(s.kept?"; earlier value still used":""))+'</li>'}).join(""):'<li>Not loaded yet.</li>')+'</ul></details>';
+    /* Notes */
+    var near=b.expiries.filter(function(e){return e.key-b.now<=3*DAYMS}).map(function(e){return {e:e,share:e.oi/b.total.oi}}).filter(function(x){return x.share>=.1});
+    h+='<p class="vnote">Raw strength: under 0.1% weak; 0.1–0.3% moderate; above 0.3% strong. Provisional rules, not validated probabilities. Neutral band: under 0.01% of turnover or at least 90% cancellation.</p>'+
+      (dv&&dv.ch4!==null?'<p class="vnote">DVOL 4h change: '+(dv.ch4>=0?"+":"−")+Math.abs(dv.ch4).toFixed(2)+' points.</p>':'')+
+      '<p class="vnote">'+(near.length?near.map(function(x){return "The "+dname(x.e.key)+" expiry ("+inTime(x.e.key)+") holds "+Math.round(x.share*100)+"% of selected open interest"}).join("; ")+": large near-expiry rates may overstate a full-day move.":"No expiry within 3 days holds at least 10% of selected open interest.")+'</p>'+
+      '<p class="vnote">Chart scenario driver: Vanna · '+(vcIv<0?"−3":vcIv>0?"+3":"0")+' IV points. Gamma regime uses the calculated net sign across the chosen expiries ('+(c.net>=0?"positive":"negative")+'); being below a flip alone does not guarantee negative Gamma.</p>';
+    /* Recent DVOL move repeated */
+    var thr=res.threshold;
+    if(dv&&dv.ch24!==null){
+      var rv=-b.total.vanna*dv.ch24,rc=-b.total.charm,rt=rv+rc,rl=labelOf(rt,rv,rc,thr);
+      h+='<details><summary>Recent DVOL move repeated · sensitivity only</summary><p>If DVOL moves '+(dv.ch24>=0?"+":"−")+Math.abs(dv.ch24).toFixed(2)+' points again over the next 24 hours (as it did over the last 24): Vanna flow '+m$(rv)+', Charm flow '+m$(rc)+', total <b>'+m$(rt)+'</b> ('+rl+'). A sensitivity check only: the last move says nothing about the next one, and it does not change the label above.</p></details>';
+    }else h+='<details><summary>Recent DVOL move repeated · sensitivity only</summary><p>DVOL history not loaded yet.</p></details>';
+    h+='<details><summary>Flow rules and market-data sources</summary><ul>'+
+      '<li>Options: Deribit, every listed option in the chosen expiries with open interest, mark IV and a forward price. Vanna per +1 IV point and Charm per calendar day, Black-Scholes on the forward.</li>'+
+      '<li>Dealer exposure = sign × open interest × spot (calls +, puts −). Hedge flow is the opposite sign of the exposure change.</li>'+
+      '<li>24-hour flow for IV −3 / flat / +3 = −Vanna × IV points − Charm. Label from the flat case; Neutral when the three disagree, when Vanna and Charm cancel to within 10%, or under 0.01% of 24h turnover.</li>'+
+      '<li>Strength: flow as a share of turnover (under 0.1% weak, 0.1–0.3% moderate, above 0.3% strong), one step up when net Gamma is negative and the label holds in all three scenarios.</li>'+
+      '<li>Turnover: 24h quote volume of the '+a+' perpetual on the first two healthy of Binance, Bybit, Bitget, Gate, Deribit (data under 10 minutes old). DVOL: Deribit hourly index.</li>'+
+      '<li>The ETH phone alert uses exactly these rules on All expiries and rings once when the label changes.</li></ul></details>';
+    /* Detailed exposures & exact repricing */
+    var ex=[-3,0,3].map(function(v){return exactFlow(b,v)});
+    h+='<details><summary>Detailed exposures &amp; exact repricing</summary>'+
+      '<table class="vtbl"><tr><th></th><th>Net</th><th>Gross</th></tr>'+
+      '<tr><td>Vanna exposure, per +1 IV point</td><td>'+m$(b.total.vanna)+'</td><td>'+m$(b.total.grossVanna).replace("+","")+'</td></tr>'+
+      '<tr><td>Charm exposure, per day</td><td>'+m$(b.total.charm)+'</td><td>'+m$(b.total.grossCharm).replace("+","")+'</td></tr></table>'+
+      '<p class="vnote">Exposure = change in dealers’ delta in USD; the hedge flow is the opposite sign. '+f(Math.round(b.total.oi))+' '+a+' of open interest.</p>'+
+      '<table class="vtbl"><tr><th>Next 24h, IV path</th><th>Linear</th><th>Exact</th></tr>'+
+      res.rows.map(function(r,i){return '<tr'+(r.iv===0?' class="base"':'')+'><td>'+rowN[String(r.iv)]+'</td><td>'+m$(r.total)+'</td><td><b>'+m$(ex[i])+'</b></td></tr>'}).join("")+'</table>'+
+      '<p class="vnote">Exact = every option re-priced with Black-Scholes one day later at the new IV, price unchanged; options expiring within the day settle at today’s forward. Linear = the Vanna + Charm rates above. A big gap means near-expiry options dominate.</p>'+
+      '<table class="vtbl"><tr><th>Expiry</th><th>Vanna flow +1</th><th>Charm flow</th><th>Open</th></tr>'+
+      b.expiries.map(function(e){return '<tr><td>'+dname(e.key)+'</td><td>'+m$(-e.vanna)+'</td><td>'+m$(-e.charm)+'</td><td>'+f(Math.round(e.oi))+'</td></tr>'}).join("")+'</table></details>';
+    el.innerHTML=h;
+  }
+  $("vc").addEventListener("click",function(e){
+    var t=e.target.closest("[data-iv],[data-k],#vcall,#vcretry");if(!t)return;
+    if(t.id==="vcall")vcAll=!vcAll;
+    else if(t.id==="vcretry"){vcLoad(asset,true);}
+    else if(t.hasAttribute("data-iv"))vcIv=+t.getAttribute("data-iv");
+    else vcK=+t.getAttribute("data-k");
+    drawVC();
+    if(t.hasAttribute("data-k")){var r=document.querySelector('#vc [data-k="'+vcK+'"]');if(r)r.focus({preventScroll:true})}
+  });
+  $("vc").addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.hasAttribute&&e.target.hasAttribute("data-k")){vcK=+e.target.getAttribute("data-k");drawVC();e.preventDefault()}});
   $("rfbtn").addEventListener("click",fetchLive);
   clear();
   draw();
