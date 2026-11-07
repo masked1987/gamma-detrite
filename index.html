@@ -200,6 +200,17 @@ h2{font-size:.98rem;line-height:1.3}
 .vchart .zero{stroke:var(--line);stroke-width:1}
 .vchart .band{fill:var(--ink);fill-opacity:.09}
 .vchart .hb{fill:transparent;cursor:pointer}
+.vhseg{display:grid;grid-template-columns:repeat(5,1fr);width:100%;margin:4px 0 6px}
+.vhseg button{min-width:0}
+.vhchart .vhBullish{fill:var(--pos);fill-opacity:.17}.vhchart .vhBearish{fill:var(--neg);fill-opacity:.17}
+.vhchart .vhline{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.vhchart .vhmark{stroke:var(--muted);stroke-width:.8;stroke-dasharray:2 3}
+.vhchart .vhstart{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}
+.vhchart .vhB{fill:var(--pos);stroke:var(--bg);stroke-width:1.2}.vhchart .vhS{fill:var(--neg);stroke:var(--bg);stroke-width:1.2}
+.vhchart .vhN{fill:var(--bg);stroke:var(--muted);stroke-width:2}
+.vhk{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin:0 3px 0 6px}
+.vhk.vhBullish{background:color-mix(in srgb,var(--pos) 45%,transparent)}.vhk.vhBearish{background:color-mix(in srgb,var(--neg) 45%,transparent)}
+.vhtbl td{font-size:.84rem}.vhtbl .vhwait{color:var(--muted)}
 .vbox{margin:10px 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--ink) 6%,transparent);font-size:.9rem;line-height:1.6}
 .vtbl{width:100%;border-collapse:collapse;font-size:.88rem;margin:8px 0}
 .vtbl th{font-weight:500;color:var(--muted);text-align:right;padding:6px 4px;border-bottom:1px solid var(--line);font-size:.8rem}
@@ -794,6 +805,103 @@ h2{font-size:.98rem;line-height:1.3}
     ks.forEach(function(k,i){h+='<rect class="hb" data-k="'+k+'" x="'+(L+i*st).toFixed(1)+'" y="'+top+'" width="'+st.toFixed(1)+'" height="'+(bot-top)+'" tabindex="0" role="button" aria-label="Strike '+f(k)+'"/>'});
     return '<div class="vchart">'+h+'</svg></div>';
   }
+  /* ===== Label history (7 Nov 2026, owner: "historical chart where everything is visible when vanna and
+     charm did change for bullish or bearish"). Readings come from the phone-alert job's log
+     (fragility data branch, vanna-log.csv: ETH, All expiries, every ~15 min since 7 Nov 2026 10:16 UTC);
+     price from Bitstamp ETH/USD candles. Older history can't be rebuilt (past option positions aren't free). */
+  var VH={log:null,logAt:0,busy:false,err:null,c:{}},vhR=7;
+  var VH_LOG=["https://raw.githubusercontent.com/masked1987/fragility/data/vanna-log.csv","/gh/fragility/data/vanna-log.csv"],
+      VH_GAP=3*36e5,VH_RANGES=[[1,"1D"],[3,"3D"],[7,"7D"],[30,"30D"],[0,"All"]];
+  function vhParse(txt){
+    var lines=txt.trim().split(/\r?\n/),head=lines.shift().split(","),out=[];
+    lines.forEach(function(l){
+      var c=l.split(","),o={};head.forEach(function(h,i){o[h]=c[i]});
+      var t=Date.parse(o.time_utc),s=+o.spot;
+      if(isFinite(t)&&s>0&&/^(Bullish|Bearish|Neutral)$/.test(o.label))out.push({t:t,spot:s,label:o.label,flat:+o.flow_flat,pct:+o.pct_turnover,dn:o.label_iv_minus3,fl:o.label_flat,up:o.label_iv_plus3});
+    });
+    out.sort(function(a,b){return a.t-b.t});
+    return out.filter(function(r,i){return !i||r.t!==out[i-1].t});
+  }
+  /* Candle step: 15 min (1,000 ≈ 10 days), 1 hour (≈ 41 days) or 4 hours (≈ 166 days) */
+  function vhStep(days){return days&&days<=7?900:days&&days<=30?3600:14400}
+  function vhGet(u){return fetch(u+(u.indexOf("?")<0?"?t=":"&t=")+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw Error("HTTP "+r.status);return r})}
+  function vhLoad(force){
+    var step=vhStep(vhR),now=Date.now(),c=VH.c[step];
+    var needLog=force||!VH.log||now-VH.logAt>300000,needC=force||!c||now-c.at>300000;
+    if(VH.busy||(!needLog&&!needC))return;
+    VH.busy=true;
+    var pl=needLog?vhGet(VH_LOG[0]).catch(function(){return vhGet(VH_LOG[1])}).then(function(r){return r.text()}).then(function(t){VH.log=vhParse(t);VH.logAt=Date.now();VH.err=null}):Promise.resolve();
+    var pc=needC?vhGet("https://www.bitstamp.net/api/v2/ohlc/ethusd/?step="+step+"&limit=1000").then(function(r){return r.json()}).then(function(j){
+      var d=j&&j.data&&j.data.ohlc;if(!d||!d.length)throw Error("no candles");
+      VH.c[step]={at:Date.now(),k:d.map(function(x){return {t:+x.timestamp*1000,c:+x.close}}).sort(function(a,b){return a.t-b.t})};
+    }):Promise.resolve();
+    settle([pl.catch(function(e){if(!VH.log)VH.err="log"}),pc.catch(function(){})]).then(function(){
+      VH.busy=false;var el=$("vchist");if(el&&asset==="ETH")el.innerHTML=vhHtml();
+    });
+  }
+  function ukTime(t,short){return new Date(t).toLocaleString("en-GB",short?{timeZone:"Europe/London",day:"numeric",month:"short"}:{timeZone:"Europe/London",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+  /* Price at time t from candles (last close at or before t), else the reading's own price */
+  function vhPx(k,t){var p=null;for(var i=0;i<k.length&&k[i].t<=t;i++)p=k[i].c;return p}
+  function vhChanges(log){
+    var ch=[];for(var i=1;i<log.length;i++)if(log[i].label!==log[i-1].label)ch.push({r:log[i],from:log[i-1].label,gap:log[i].t-log[i-1].t>VH_GAP});
+    return ch;
+  }
+  function vhHtml(){
+    if(asset!=="ETH")return '<h3>Label history</h3><p class="vnote">The history is saved for ETH only (the phone-alert reading). Switch to ETH to see it.</p>';
+    var head='<h3>When the label changed</h3>'+
+      '<div class="seg vhseg" role="group" aria-label="History range">'+VH_RANGES.map(function(r){return '<button type="button" data-vh="'+r[0]+'" aria-pressed="'+(r[0]===vhR)+'">'+r[1]+'</button>'}).join("")+'</div>';
+    var log=VH.log,step=vhStep(vhR),cs=VH.c[step];
+    if(!log)return head+'<p class="vnote">'+(VH.err?'Could not load the saved readings. <button type="button" class="btn" id="vhretry">Try again</button>':'Loading the saved readings…')+'</p>';
+    if(!log.length)return head+'<p class="vnote">No readings saved yet. The alert job adds one about every 15 minutes.</p>';
+    var now=Date.now(),t1=now,t0=vhR?now-vhR*864e5:Math.min(log[0].t-36e5,now-864e5);
+    var k=cs?cs.k.filter(function(x){return x.t>=t0-step*1000&&x.t<=t1}):[];
+    var line=k.length>1?k.map(function(x){return {t:Math.max(x.t,t0),p:x.c}}):log.filter(function(r){return r.t>=t0}).map(function(r){return {t:r.t,p:r.spot}});
+    var inR=log.filter(function(r){return r.t>=t0}),ch=vhChanges(log),chR=ch.filter(function(c){return c.r.t>=t0});
+    var lo=Infinity,hi=-Infinity;line.concat(inR.map(function(r){return {p:r.spot}})).forEach(function(x){lo=Math.min(lo,x.p);hi=Math.max(hi,x.p)});
+    if(!isFinite(lo)){lo=hi=log[log.length-1].spot}
+    var pd=Math.max((hi-lo)*.08,hi*.002);lo-=pd;hi+=pd;
+    var W=360,H=200,L=46,Rr=352,top=12,bot=168;
+    function X(t){return L+(t-t0)/(t1-t0)*(Rr-L)}
+    function Y(p){return bot-(p-lo)/(hi-lo)*(bot-top)}
+    var h='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="ETH price with the Vanna and Charm label shaded and every label change marked">';
+    /* Label bands: each reading holds until the next one (at most 3 hours, then unknown) */
+    log.forEach(function(r,i){
+      if(r.t>t1||(i<log.length-1&&log[i+1].t<t0))return;
+      var end=Math.min(i<log.length-1?log[i+1].t:now,r.t+VH_GAP,t1),st=Math.max(r.t,t0);
+      if(end>st&&r.label!=="Neutral")h+='<rect class="vh'+r.label+'" x="'+X(st).toFixed(1)+'" y="'+top+'" width="'+Math.max(.6,X(end)-X(st)).toFixed(1)+'" height="'+(bot-top)+'"/>';
+    });
+    var saved=log[0].t;if(saved>t0&&saved<t1)h+='<line class="vhstart" x1="'+X(saved).toFixed(1)+'" x2="'+X(saved).toFixed(1)+'" y1="'+top+'" y2="'+bot+'"/><text class="k" x="'+(X(saved)>Rr-70?X(saved)-3:X(saved)+3).toFixed(1)+'" y="'+(bot-5)+'" text-anchor="'+(X(saved)>Rr-70?"end":"start")+'">saving starts</text>';
+    [hi-pd,(hi+lo)/2,lo+pd].forEach(function(p){h+='<line class="zero" x1="'+L+'" x2="'+Rr+'" y1="'+Y(p).toFixed(1)+'" y2="'+Y(p).toFixed(1)+'"/><text class="k" x="'+(L-4)+'" y="'+(Y(p)+3).toFixed(1)+'" text-anchor="end">'+f(Math.round(p))+'</text>'});
+    if(line.length>1)h+='<path class="vhline" d="'+line.map(function(x,i){return (i?"L":"M")+X(x.t).toFixed(1)+" "+Y(x.p).toFixed(1)}).join("")+'"/>';
+    chR.forEach(function(c){
+      var x=X(c.r.t),y=Y(vhPx(k,c.r.t)||c.r.spot),l=c.r.label;
+      h+='<line class="vhmark" x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="'+top+'" y2="'+bot+'"/>';
+      h+=l==="Bullish"?'<path class="vhB" d="M'+x.toFixed(1)+' '+(y-7).toFixed(1)+'l6 10h-12z"/>':l==="Bearish"?'<path class="vhS" d="M'+x.toFixed(1)+' '+(y+7).toFixed(1)+'l6 -10h-12z"/>':'<circle class="vhN" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="4.5"/>';
+    });
+    var span=t1-t0,n=4;for(var i=0;i<=n;i++){var t=t0+span*i/n;h+='<text class="k" x="'+X(t).toFixed(1)+'" y="'+(bot+14)+'" text-anchor="'+(i===0?"start":i===n?"end":"middle")+'">'+(span<=2*864e5?new Date(t).toLocaleTimeString("en-GB",{timeZone:"Europe/London",hour:"2-digit",minute:"2-digit"}):ukTime(t,true))+'</text>'}
+    h+='</svg>';
+    var last=log[log.length-1];
+    var out=head+'<div class="vchart vhchart">'+h+'</div>'+
+      '<p class="vlg"><span class="vhk vhBullish"></span>Bullish (dealers expected to buy) <span class="vhk vhBearish"></span>Bearish (expected to sell) · no colour = Neutral. ▲ / ▼ / ○ = the label changed there (your phone rang). Times UK.</p>'+
+      '<p class="vnote">Saved since '+ukTime(log[0].t)+' · '+f(log.length)+' readings · latest '+ukTime(last.t)+' ('+last.label+'). ETH, All expiries: the phone-alert reading, whatever expiry tab is chosen above. Price: Bitstamp ETH/USD. Nothing before '+ukTime(log[0].t,true)+': past option positions aren’t free to download.</p>';
+    /* Changes table, newest first, with the price move after */
+    if(!ch.length)out+='<p class="vnote">No label changes yet. Each change will show here with what price did 4 and 24 hours later.</p>';
+    else{
+      var k15=(VH.c[900]||VH.c[3600]||VH.c[14400]||{k:[]}).k;
+      var after=function(c,hrs){
+        var t=c.r.t+hrs*36e5;if(t>now)return '<td class="vhwait">—</td>';
+        var p0=vhPx(k15,c.r.t)||c.r.spot,p1=vhPx(k15,t);if(!p1||!k15.length||k15[k15.length-1].t<t-36e5)return '<td>–</td>';
+        var m=(p1/p0-1)*100,way=c.r.label==="Bullish"?m>0:c.r.label==="Bearish"?m<0:null;
+        return '<td class="'+(way===null?"":way?"Bullish":"Bearish")+'">'+(m>=0?"+":"−")+Math.abs(m).toFixed(2)+'%</td>';
+      };
+      out+='<table class="vtbl vhtbl"><tr><th>Time (UK)</th><th>Change</th><th>Price</th><th>4h later</th><th>24h later</th></tr>'+
+        ch.slice().reverse().slice(0,30).map(function(c){
+          return '<tr><td>'+ukTime(c.r.t)+'</td><td>'+c.from.slice(0,4)+' → <b class="'+c.r.label+'">'+c.r.label+'</b>'+(c.gap?' <span class="vhwait">(after a gap)</span>':'')+'</td><td>'+f(Math.round(c.r.spot))+'</td>'+after(c,4)+after(c,24)+'</tr>';
+        }).join("")+'</table>'+
+        '<p class="vnote">Move after = price change since the label changed. Blue = price went the label’s way (up after Bullish, down after Bearish), pink = the other way; Neutral uncoloured. — = not that long ago yet.'+(ch.length>30?' Newest 30 of '+ch.length+' changes.':'')+'</p>';
+    }
+    return out;
+  }
   function drawVC(){
     var el=$("vc"),a=asset,c=vcCalc(a);
     if(!c){el.innerHTML='<p class="vnote">No options to read for '+pname(pick).toLowerCase()+' expiries right now. Pick another tab.</p>';return}
@@ -810,6 +918,7 @@ h2{font-size:.98rem;line-height:1.3}
       '<div class="vctx"><div class="vtop"><span class="k2">24-hour flow context · '+a+'</span><span class="pill">'+pill+'</span></div>'+
         '<div class="lbl '+lbl+'">'+lbl+'</div><p>'+why+'</p>'+
         '<p class="m">Background context for your Gamma setup. Assumes dealers long calls and short puts; inventory is unknown.</p></div>';
+    h+='<div id="vchist">'+vhHtml()+'</div>';
     /* Charts */
     var all=b.strikes.map(function(r){return r.key}),ks=vcAll?all:all.slice().sort(function(x,y){return Math.abs(x-R.spot)-Math.abs(y-R.spot)}).slice(0,11).sort(function(x,y){return x-y});
     if(vcK===null||ks.indexOf(vcK)<0)vcK=ks.slice().sort(function(x,y){return Math.abs(x-R.spot)-Math.abs(y-R.spot)})[0];
@@ -876,8 +985,11 @@ h2{font-size:.98rem;line-height:1.3}
       '<table class="vtbl"><tr><th>Expiry</th><th>Vanna flow +1</th><th>Charm flow</th><th>Open</th></tr>'+
       b.expiries.map(function(e){return '<tr><td>'+dname(e.key)+'</td><td>'+m$(-e.vanna)+'</td><td>'+m$(-e.charm)+'</td><td>'+f(Math.round(e.oi))+'</td></tr>'}).join("")+'</table></details>';
     el.innerHTML=h;
+    if(asset==="ETH")vhLoad(false);
   }
   $("vc").addEventListener("click",function(e){
+    var v=e.target.closest("[data-vh],#vhretry");
+    if(v){if(v.id==="vhretry")vhLoad(true);else{vhR=+v.getAttribute("data-vh");$("vchist").innerHTML=vhHtml();vhLoad(false)}return}
     var t=e.target.closest("[data-iv],[data-k],#vcall,#vcretry");if(!t)return;
     if(t.id==="vcall")vcAll=!vcAll;
     else if(t.id==="vcretry"){vcLoad(asset,true);}
